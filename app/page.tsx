@@ -6,24 +6,30 @@ export default async function Home() {
     apiKey: process.env.AIRTABLE_API_KEY!,
   }).base(process.env.AIRTABLE_BASE_ID!);
 
+  // Fetch Daily Scores
   const records = await base("Daily Scores")
     .select({
       sort: [{ field: "Date", direction: "desc" }]
     })
     .all();
 
+  // Fetch Core Universe (for stock name mapping)
   const coreRecords = await base("Core Universe").select().all();
 
-  const stockMap: any = {};
-  coreRecords.forEach(r => {
+  const stockMap: Record<string, string> = {};
+
+  coreRecords.forEach((r: any) => {
     stockMap[r.id] = r.fields["Stock"];
   });
 
-  const latestByStock: any = {};
+  const latestByStock: Record<string, any> = {};
 
-  records.forEach(record => {
-    const stockId = record.fields["Stock Link"]?.[0];
-    if (!stockId) return;
+  records.forEach((record: any) => {
+    const stockLink = record.fields["Stock Link"] as string[] | undefined;
+
+    if (!stockLink || stockLink.length === 0) return;
+
+    const stockId = stockLink[0];
 
     if (!latestByStock[stockId]) {
       latestByStock[stockId] = record.fields;
