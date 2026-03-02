@@ -3,36 +3,36 @@ import Airtable from "airtable";
 export default async function Home() {
 
   const base = new Airtable({
-    apiKey: process.env.AIRTABLE_API_KEY!,
-  }).base(process.env.AIRTABLE_BASE_ID!);
+    apiKey: process.env.AIRTABLE_API_KEY as string,
+  }).base(process.env.AIRTABLE_BASE_ID as string);
 
-  // Fetch Daily Scores
   const records = await base("Daily Scores")
     .select({
       sort: [{ field: "Date", direction: "desc" }]
     })
     .all();
 
-  // Fetch Core Universe (for stock name mapping)
   const coreRecords = await base("Core Universe").select().all();
 
   const stockMap: Record<string, string> = {};
 
   coreRecords.forEach((r: any) => {
-    stockMap[r.id] = r.fields["Stock"];
+    stockMap[r.id] = r.fields?.Stock;
   });
 
   const latestByStock: Record<string, any> = {};
 
   records.forEach((record: any) => {
-    const stockLink = record.fields["Stock Link"] as string[] | undefined;
+    const fields: any = record.fields;
 
-    if (!stockLink || stockLink.length === 0) return;
+    const stockLink = fields["Stock Link"];
+
+    if (!Array.isArray(stockLink) || stockLink.length === 0) return;
 
     const stockId = stockLink[0];
 
     if (!latestByStock[stockId]) {
-      latestByStock[stockId] = record.fields;
+      latestByStock[stockId] = fields;
     }
   });
 
