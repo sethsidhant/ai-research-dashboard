@@ -2,89 +2,94 @@ import Airtable from "airtable";
 
 export default async function Home() {
 
-const base = new Airtable({
-apiKey: process.env.AIRTABLE_API_KEY!,
-}).base(process.env.AIRTABLE_BASE_ID!);
+  const base = new Airtable({
+    apiKey: process.env.AIRTABLE_API_KEY
+  }).base(process.env.AIRTABLE_BASE_ID);
 
-const records = await base("Daily Scores")
-.select({ view: "Grid view" })
-.all();
+  const records = await base("Daily Scores")
+    .select({
+      sort: [{ field: "Date", direction: "desc" }]
+    })
+    .all();
 
-const rows = records.map((record: any) => {
+  const latestByStock = {};
 
-```
-const stock = record.fields["Stock Name"] || "Unknown";
-const peDeviation = record.fields["PE Deviation %"];
+  records.forEach((record) => {
+    const fields = record.fields;
+    const stock = fields["Stock Name"];
+    const peDeviation = fields["PE Deviation %"];
 
-let status = "Fair";
-let color = "text-gray-300";
+    if (!stock) return;
 
-if (peDeviation <= -20) {
-  status = "Cheap";
-  color = "text-green-400";
-}
+    if (!latestByStock[stock]) {
 
-if (peDeviation >= 20) {
-  status = "Expensive";
-  color = "text-red-400";
-}
+      let valuation = "Fair";
+      let color = "text-gray-300";
 
-return {
-  stock,
-  peDeviation,
-  status,
-  color
-};
-```
+      if (peDeviation <= -20) {
+        valuation = "Cheap";
+        color = "text-green-400";
+      }
 
-});
+      if (peDeviation >= 20) {
+        valuation = "Expensive";
+        color = "text-red-400";
+      }
 
-return ( <main className="p-10 bg-black min-h-screen text-white">
+      latestByStock[stock] = {
+        stock,
+        peDeviation,
+        valuation,
+        color
+      };
+    }
+  });
 
-```
-  <h1 className="text-3xl mb-8 font-bold">
-    AI Research Desk – Valuation Monitor
-  </h1>
+  const data = Object.values(latestByStock);
 
-  <table className="border border-gray-700 w-full text-center">
+  return (
+    <main className="p-10 bg-black min-h-screen text-white">
 
-    <thead className="bg-gray-900">
-      <tr>
-        <th className="p-3 border border-gray-700">Stock</th>
-        <th className="p-3 border border-gray-700">PE Deviation</th>
-        <th className="p-3 border border-gray-700">Valuation</th>
-      </tr>
-    </thead>
+      <h1 className="text-3xl font-bold mb-8">
+        AI Research Desk – Valuation Monitor
+      </h1>
 
-    <tbody>
+      <table className="border border-gray-700 w-full text-center">
 
-      {rows.map((row, i) => (
-        <tr key={i} className="hover:bg-gray-800">
+        <thead className="bg-gray-900">
+          <tr>
+            <th className="p-3 border border-gray-700">Stock</th>
+            <th className="p-3 border border-gray-700">PE Deviation</th>
+            <th className="p-3 border border-gray-700">Valuation</th>
+          </tr>
+        </thead>
 
-          <td className="p-3 border border-gray-700">
-            {row.stock}
-          </td>
+        <tbody>
 
-          <td className="p-3 border border-gray-700">
-            {row.peDeviation
-              ? row.peDeviation.toFixed(1) + "%"
-              : "-"
-            }
-          </td>
+          {data.map((row, i) => (
 
-          <td className={"p-3 border border-gray-700 font-semibold " + row.color}>
-            {row.status}
-          </td>
+            <tr key={i} className="hover:bg-gray-800">
 
-        </tr>
-      ))}
+              <td className="p-3 border border-gray-700">
+                {row.stock}
+              </td>
 
-    </tbody>
+              <td className="p-3 border border-gray-700">
+                {row.peDeviation ? row.peDeviation.toFixed(1) + "%" : "-"}
+              </td>
 
-  </table>
+              <td className={"p-3 border border-gray-700 font-semibold " + row.color}>
+                {row.valuation}
+              </td>
 
-</main>
-```
+            </tr>
 
-);
+          ))}
+
+        </tbody>
+
+      </table>
+
+    </main>
+  );
 }
