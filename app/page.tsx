@@ -9,7 +9,7 @@ export default async function Home() {
     apiKey: apiKey
   }).base(baseId);
 
-  // Fetch Core Universe
+  // CORE UNIVERSE
   const coreRecords = await base("Core Universe")
     .select({})
     .all();
@@ -23,7 +23,7 @@ export default async function Home() {
     };
   });
 
-  // Fetch Daily Scores
+  // DAILY SCORES
   const records = await base("Daily Scores")
     .select({
       sort: [{ field: "Date", direction: "desc" }]
@@ -42,13 +42,16 @@ export default async function Home() {
     if (!stockLink || stockLink.length === 0) return;
 
     const stockId = stockLink[0];
-
     const stockInfo = stockMap[stockId];
 
     if (!stockInfo) return;
 
     const stock = stockInfo.name;
     const ticker = stockInfo.ticker;
+
+    // IMPORTANT FIX
+    // Skip rows where PE deviation is empty
+    if (peDeviation === undefined || peDeviation === null) return;
 
     if (!latestByStock[stock]) {
 
@@ -114,7 +117,7 @@ export default async function Home() {
               </td>
 
               <td className="p-3 border border-gray-700">
-                {row.peDeviation ? row.peDeviation.toFixed(1) + "%" : "-"}
+                {row.peDeviation.toFixed(1) + "%"}
               </td>
 
               <td className={"p-3 border border-gray-700 font-semibold " + row.color}>
