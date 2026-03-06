@@ -78,14 +78,18 @@ export default async function Home() {
 
   });
 
-  const data = Object.values(latestByStock);
+  let data: any = Object.values(latestByStock);
+
+  // SORT BY PE DEVIATION (CHEAPEST FIRST)
+
+  data = data.sort((a: any, b: any) => a.peDeviation - b.peDeviation);
 
   return (
 
     <main className="p-10 bg-black min-h-screen text-white">
 
       <h1 className="text-3xl font-bold mb-8">
-        AI Research Desk – Valuation Monitor
+        AI Research Desk – Valuation Heatmap
       </h1>
 
       <table className="border border-gray-700 w-full text-center">
@@ -102,7 +106,7 @@ export default async function Home() {
 
         <tbody>
 
-          {data.map((row: any, i) => (
+          {data.map((row: any, i: number) => (
 
             <tr key={i} className="hover:bg-gray-800">
 
@@ -119,11 +123,15 @@ export default async function Home() {
               </td>
 
               <td className="p-3 border border-gray-700">
+
                 {row.peDeviation.toFixed(1)}%
+
               </td>
 
               <td className={"p-3 border border-gray-700 font-semibold " + row.color}>
+
                 {row.valuation}
+
               </td>
 
             </tr>
