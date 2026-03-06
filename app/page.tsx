@@ -72,7 +72,7 @@ return ( <main className="p-10 bg-black min-h-screen text-white">
             }
           </td>
 
-          <td className={`p-3 border border-gray-700 font-semibold ${row.color}`}>
+          <td className={"p-3 border border-gray-700 font-semibold " + row.color}>
             {row.status}
           </td>
 
