@@ -9,7 +9,7 @@ export default async function Home() {
     apiKey: apiKey
   }).base(baseId);
 
-  // Fetch core universe
+  // Fetch Core Universe
   const coreRecords = await base("Core Universe")
     .select({})
     .all();
@@ -17,10 +17,13 @@ export default async function Home() {
   const stockMap: any = {};
 
   coreRecords.forEach((r: any) => {
-    stockMap[r.id] = r.fields["Stock"];
+    stockMap[r.id] = {
+      name: r.fields["Stock"],
+      ticker: r.fields["Ticker"]
+    };
   });
 
-  // Fetch scores
+  // Fetch Daily Scores
   const records = await base("Daily Scores")
     .select({
       sort: [{ field: "Date", direction: "desc" }]
@@ -39,7 +42,13 @@ export default async function Home() {
     if (!stockLink || stockLink.length === 0) return;
 
     const stockId = stockLink[0];
-    const stock = stockMap[stockId];
+
+    const stockInfo = stockMap[stockId];
+
+    if (!stockInfo) return;
+
+    const stock = stockInfo.name;
+    const ticker = stockInfo.ticker;
 
     if (!latestByStock[stock]) {
 
@@ -58,6 +67,7 @@ export default async function Home() {
 
       latestByStock[stock] = {
         stock,
+        ticker,
         peDeviation,
         valuation,
         color
@@ -94,7 +104,7 @@ export default async function Home() {
               <td className="p-3 border border-gray-700">
 
                 <a
-                  href={"https://www.screener.in/company/" + row.stock + "/"}
+                  href={"https://www.screener.in/company/" + row.ticker + "/"}
                   target="_blank"
                   style={{ color: "#60a5fa" }}
                 >
