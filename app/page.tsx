@@ -20,10 +20,13 @@ export default async function Home() {
   records.forEach((record: any) => {
 
     const fields = record.fields;
-    const stock = fields["Stock Name"];
+
+    const stockLink = fields["Stock Link"];
     const peDeviation = fields["PE Deviation %"];
 
-    if (!stock) return;
+    if (!stockLink || stockLink.length === 0) return;
+
+    const stock = stockLink[0];
 
     if (!latestByStock[stock]) {
 
@@ -75,7 +78,15 @@ export default async function Home() {
             <tr key={i} className="hover:bg-gray-800">
 
               <td className="p-3 border border-gray-700">
-                {row.stock}
+
+                <a
+                  href={"https://www.screener.in/company/" + row.stock + "/"}
+                  target="_blank"
+                  style={{ color: "#60a5fa" }}
+                >
+                  {row.stock}
+                </a>
+
               </td>
 
               <td className="p-3 border border-gray-700">
