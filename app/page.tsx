@@ -2,9 +2,12 @@ import Airtable from "airtable";
 
 export default async function Home() {
 
+  const apiKey = process.env.AIRTABLE_API_KEY as string;
+  const baseId = process.env.AIRTABLE_BASE_ID as string;
+
   const base = new Airtable({
-    apiKey: process.env.AIRTABLE_API_KEY
-  }).base(process.env.AIRTABLE_BASE_ID);
+    apiKey: apiKey
+  }).base(baseId);
 
   const records = await base("Daily Scores")
     .select({
@@ -12,9 +15,10 @@ export default async function Home() {
     })
     .all();
 
-  const latestByStock = {};
+  const latestByStock: any = {};
 
-  records.forEach((record) => {
+  records.forEach((record: any) => {
+
     const fields = record.fields;
     const stock = fields["Stock Name"];
     const peDeviation = fields["PE Deviation %"];
@@ -66,7 +70,7 @@ export default async function Home() {
 
         <tbody>
 
-          {data.map((row, i) => (
+          {data.map((row: any, i) => (
 
             <tr key={i} className="hover:bg-gray-800">
 
