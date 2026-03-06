@@ -9,6 +9,18 @@ export default async function Home() {
     apiKey: apiKey
   }).base(baseId);
 
+  // Fetch core universe
+  const coreRecords = await base("Core Universe")
+    .select({})
+    .all();
+
+  const stockMap: any = {};
+
+  coreRecords.forEach((r: any) => {
+    stockMap[r.id] = r.fields["Stock"];
+  });
+
+  // Fetch scores
   const records = await base("Daily Scores")
     .select({
       sort: [{ field: "Date", direction: "desc" }]
@@ -26,7 +38,8 @@ export default async function Home() {
 
     if (!stockLink || stockLink.length === 0) return;
 
-    const stock = stockLink[0];
+    const stockId = stockLink[0];
+    const stock = stockMap[stockId];
 
     if (!latestByStock[stock]) {
 
@@ -50,6 +63,7 @@ export default async function Home() {
         color
       };
     }
+
   });
 
   const data = Object.values(latestByStock);
