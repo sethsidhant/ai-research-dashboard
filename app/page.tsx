@@ -9,7 +9,6 @@ export default async function Home() {
     apiKey: apiKey
   }).base(baseId);
 
-  // CORE UNIVERSE
   const coreRecords = await base("Core Universe")
     .select({})
     .all();
@@ -17,13 +16,14 @@ export default async function Home() {
   const stockMap: any = {};
 
   coreRecords.forEach((r: any) => {
+
     stockMap[r.id] = {
       name: r.fields["Stock"],
       ticker: r.fields["Ticker"]
     };
+
   });
 
-  // DAILY SCORES
   const records = await base("Daily Scores")
     .select({
       sort: [{ field: "Date", direction: "desc" }]
@@ -40,18 +40,16 @@ export default async function Home() {
     const peDeviation = fields["PE Deviation %"];
 
     if (!stockLink || stockLink.length === 0) return;
+    if (peDeviation === undefined || peDeviation === null) return;
 
     const stockId = stockLink[0];
+
     const stockInfo = stockMap[stockId];
 
     if (!stockInfo) return;
 
     const stock = stockInfo.name;
     const ticker = stockInfo.ticker;
-
-    // IMPORTANT FIX
-    // Skip rows where PE deviation is empty
-    if (peDeviation === undefined || peDeviation === null) return;
 
     if (!latestByStock[stock]) {
 
@@ -75,6 +73,7 @@ export default async function Home() {
         valuation,
         color
       };
+
     }
 
   });
@@ -82,6 +81,7 @@ export default async function Home() {
   const data = Object.values(latestByStock);
 
   return (
+
     <main className="p-10 bg-black min-h-screen text-white">
 
       <h1 className="text-3xl font-bold mb-8">
@@ -91,11 +91,13 @@ export default async function Home() {
       <table className="border border-gray-700 w-full text-center">
 
         <thead className="bg-gray-900">
+
           <tr>
             <th className="p-3 border border-gray-700">Stock</th>
             <th className="p-3 border border-gray-700">PE Deviation</th>
             <th className="p-3 border border-gray-700">Valuation</th>
           </tr>
+
         </thead>
 
         <tbody>
@@ -107,7 +109,7 @@ export default async function Home() {
               <td className="p-3 border border-gray-700">
 
                 <a
-                  href={"https://www.screener.in/company/" + row.ticker + "/"}
+                  href={"https://www.screener.in/company/" + row.ticker + "/consolidated/"}
                   target="_blank"
                   style={{ color: "#60a5fa" }}
                 >
@@ -117,7 +119,7 @@ export default async function Home() {
               </td>
 
               <td className="p-3 border border-gray-700">
-                {row.peDeviation.toFixed(1) + "%"}
+                {row.peDeviation.toFixed(1)}%
               </td>
 
               <td className={"p-3 border border-gray-700 font-semibold " + row.color}>
@@ -133,5 +135,7 @@ export default async function Home() {
       </table>
 
     </main>
+
   );
+
 }
