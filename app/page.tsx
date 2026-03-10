@@ -55,12 +55,6 @@ async function getData() {
       band,
       headlines: stockInfo.headlines,
       lastUpdate: stockInfo.lastUpdate,
-      compositeScore: fields["Composite Score"] ?? null,
-      classification: fields["Classification"] ?? null,
-      suggestedAction: fields["Suggested Action"] ?? null,
-      structuralScore: fields["Structural Score"] ?? null,
-      earningsScore: fields["Earnings Score"] ?? null,
-      riskScore: fields["Risk Score"] ?? null,
     };
   });
 
