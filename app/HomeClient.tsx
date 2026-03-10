@@ -8,6 +8,7 @@ type Stock = {
   peDeviation: number;
   valuation: string;
   band: string;
+  industry: string | null;
   headlines: string | null;
   lastUpdate: string | null;
   aiSummary: string | null;
@@ -56,7 +57,6 @@ function parseHeadlines(raw: string): Section[] {
   return sections;
 }
 
-// Render inline bold: **text** → <strong>
 function renderInline(text: string) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, i) =>
@@ -68,34 +68,21 @@ function renderInline(text: string) {
 
 function AISummary({ text }: { text: string }) {
   const lines = text.split("\n");
-
   return (
     <div className="space-y-1">
       {lines.map((line, i) => {
         const trimmed = line.trim();
-
-        // Skip empty lines, --- dividers, raw markdown headers without emoji
         if (!trimmed || trimmed === "---" || trimmed === "—--") return null;
         if (/^#{1,3}\s/.test(trimmed) && !/^(📊|🏭|📰|✅)/.test(trimmed.replace(/^#{1,3}\s/, ""))) return null;
-
-        // Strip leading ## from section headers
         const clean = trimmed.replace(/^#{1,3}\s*/, "");
-
-        // Section headers with emoji
         if (/^(📊|🏭|📰|✅)/.test(clean)) {
           return (
             <div key={i} className="pt-4 first:pt-0">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm font-bold text-white">{clean}</span>
-              </div>
+              <div className="text-sm font-bold text-white mb-2">{clean}</div>
             </div>
           );
         }
-
-        // Date/title header lines (e.g. "ONGC — Daily Briefing", "10 March 2026")
         if (/Daily Briefing|^\*\*\d+/.test(clean)) return null;
-
-        // Updated line
         if (clean.startsWith("_Updated:") || clean.startsWith("Updated:")) {
           return (
             <div key={i} className="text-xs text-gray-600 font-mono pt-3 mt-2 border-t border-[#1e2a38]">
@@ -103,8 +90,6 @@ function AISummary({ text }: { text: string }) {
             </div>
           );
         }
-
-        // Regular paragraph
         return (
           <p key={i} className="text-sm text-gray-300 leading-relaxed">
             {renderInline(clean)}
@@ -138,65 +123,45 @@ function SidePanel({ stock, onClose }: { stock: Stock; onClose: () => void }) {
   return (
     <>
       <div className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" onClick={onClose} />
-
       <div className="fixed right-0 top-0 h-full w-[500px] bg-[#080b0f] border-l border-[#1e2a38] z-50 flex flex-col shadow-2xl">
-
-        {/* Header */}
         <div className="px-5 py-4 border-b border-[#1e2a38] bg-[#0d1520]">
           <div className="flex items-start justify-between">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-bold text-white text-lg">{stock.stock}</span>
-                <span className="text-xs font-mono text-gray-500 bg-[#1e2a38] px-2 py-0.5 rounded">
-                  {stock.ticker}
-                </span>
                 <span className={`px-2 py-0.5 rounded text-xs font-mono ${bandStyles[stock.band]}`}>
                   {stock.valuation}
                 </span>
               </div>
-              <div className="flex items-center gap-3 mt-1">
+              <div className="flex items-center gap-3 mt-1 flex-wrap">
                 <span className={`text-sm font-mono font-bold ${stock.peDeviation < 0 ? "text-emerald-400" : "text-red-400"}`}>
                   {stock.peDeviation > 0 ? "+" : ""}{stock.peDeviation.toFixed(1)}% PE deviation
                 </span>
+                {stock.industry && (
+                  <span className="text-xs text-gray-500 font-mono">{stock.industry}</span>
+                )}
               </div>
             </div>
-            <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors text-xl px-2">
-              ✕
-            </button>
+            <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors text-xl px-2">✕</button>
           </div>
-
-          {/* Tabs */}
           <div className="flex gap-1 mt-3">
             <button
               onClick={() => setTab("summary")}
-              className={`px-3 py-1.5 rounded text-xs font-mono transition-all ${
-                tab === "summary"
-                  ? "bg-blue-500/20 text-blue-400 border border-blue-400/30"
-                  : "text-gray-500 hover:text-gray-300 border border-transparent"
-              }`}
+              className={`px-3 py-1.5 rounded text-xs font-mono transition-all ${tab === "summary" ? "bg-blue-500/20 text-blue-400 border border-blue-400/30" : "text-gray-500 hover:text-gray-300 border border-transparent"}`}
             >
               🤖 AI Summary
             </button>
             <button
               onClick={() => setTab("filings")}
-              className={`px-3 py-1.5 rounded text-xs font-mono transition-all ${
-                tab === "filings"
-                  ? "bg-blue-500/20 text-blue-400 border border-blue-400/30"
-                  : "text-gray-500 hover:text-gray-300 border border-transparent"
-              }`}
+              className={`px-3 py-1.5 rounded text-xs font-mono transition-all ${tab === "filings" ? "bg-blue-500/20 text-blue-400 border border-blue-400/30" : "text-gray-500 hover:text-gray-300 border border-transparent"}`}
             >
               🏛 Filings & News
-              {sections.length > 0 && (
-                <span className="ml-1.5 text-gray-600">{sections.reduce((a, s) => a + s.items.length, 0)}</span>
-              )}
+              {sections.length > 0 && <span className="ml-1.5 text-gray-600">{sections.reduce((a, s) => a + s.items.length, 0)}</span>}
             </button>
           </div>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto p-5">
-
-          {/* AI Summary tab */}
           {tab === "summary" && (
             stock.aiSummary ? (
               <div>
@@ -217,13 +182,11 @@ function SidePanel({ stock, onClose }: { stock: Stock; onClose: () => void }) {
             )
           )}
 
-          {/* Filings tab */}
           {tab === "filings" && (
             sections.length === 0 ? (
               <div className="text-center py-16">
                 <p className="text-3xl mb-3">📭</p>
                 <p className="text-gray-500 font-mono text-sm">No filings available</p>
-                <p className="text-gray-600 font-mono text-xs mt-1">Run newsAgent.js to populate</p>
               </div>
             ) : (
               <div className="space-y-5">
@@ -248,12 +211,8 @@ function SidePanel({ stock, onClose }: { stock: Stock; onClose: () => void }) {
                           <div className="flex items-center justify-between mt-2">
                             {item.date && <span className="text-xs text-gray-500 font-mono">{item.date}</span>}
                             {item.link && (
-                              <a
-                                href={item.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs font-mono px-2 py-1 rounded bg-[#1e2a38] text-gray-400 hover:bg-blue-500/20 hover:text-blue-400 border border-[#2e3f54] hover:border-blue-400/30 transition-all"
-                              >
+                              <a href={item.link} target="_blank" rel="noopener noreferrer"
+                                className="text-xs font-mono px-2 py-1 rounded bg-[#1e2a38] text-gray-400 hover:bg-blue-500/20 hover:text-blue-400 border border-[#2e3f54] hover:border-blue-400/30 transition-all">
                                 {item.link.includes(".pdf") ? "📄 PDF" : "🔗 Link"}
                               </a>
                             )}
@@ -268,20 +227,13 @@ function SidePanel({ stock, onClose }: { stock: Stock; onClose: () => void }) {
           )}
         </div>
 
-        {/* Footer */}
         <div className="border-t border-[#1e2a38] px-5 py-3 flex gap-3">
-          <a
-            href={`https://www.screener.in/company/${stock.ticker}/consolidated/`}
-            target="_blank"
-            className="flex-1 text-center py-2 rounded bg-[#1e2a38] text-blue-400 text-xs font-mono hover:bg-blue-500/20 transition-all border border-[#2e3f54]"
-          >
+          <a href={`https://www.screener.in/company/${stock.ticker}/consolidated/`} target="_blank"
+            className="flex-1 text-center py-2 rounded bg-[#1e2a38] text-blue-400 text-xs font-mono hover:bg-blue-500/20 transition-all border border-[#2e3f54]">
             Screener.in ↗
           </a>
-          <a
-            href="https://www.bseindia.com/corporates/ann.html"
-            target="_blank"
-            className="flex-1 text-center py-2 rounded bg-[#1e2a38] text-blue-400 text-xs font-mono hover:bg-blue-500/20 transition-all border border-[#2e3f54]"
-          >
+          <a href="https://www.bseindia.com/corporates/ann.html" target="_blank"
+            className="flex-1 text-center py-2 rounded bg-[#1e2a38] text-blue-400 text-xs font-mono hover:bg-blue-500/20 transition-all border border-[#2e3f54]">
             BSE Filings ↗
           </a>
         </div>
@@ -293,12 +245,27 @@ function SidePanel({ stock, onClose }: { stock: Stock; onClose: () => void }) {
 export default function HomeClient({ data }: { data: Stock[] }) {
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
 
+  // Group stocks by industry
+  const grouped: Record<string, Stock[]> = {};
+  data.forEach((stock) => {
+    const key = stock.industry || "Other";
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(stock);
+  });
+
+  // Sort groups by average PE deviation (cheapest sector first)
+  const sortedGroups = Object.entries(grouped).sort(([, a], [, b]) => {
+    const avgA = a.reduce((sum, s) => sum + s.peDeviation, 0) / a.length;
+    const avgB = b.reduce((sum, s) => sum + s.peDeviation, 0) / b.length;
+    return avgA - avgB;
+  });
+
   return (
     <>
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight text-white">Valuation Heatmap</h1>
         <p className="text-sm text-gray-500 mt-1 font-mono">
-          {data.length} stocks · PE deviation · click stock for screener · 📋 for AI summary & filings
+          {data.length} stocks · grouped by sector · click stock for screener · 🤖 for AI summary
         </p>
       </div>
 
@@ -321,60 +288,64 @@ export default function HomeClient({ data }: { data: Stock[] }) {
         })}
       </div>
 
-      {/* Table */}
-      <div className="rounded-lg border border-[#1e2a38] overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-[#0d1520] border-b border-[#1e2a38]">
-              {["Stock", "Ticker", "PE Deviation", "Valuation", ""].map((h, i) => (
-                <th key={i} className="px-4 py-3 text-left text-xs font-mono text-gray-500 tracking-wider font-medium">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row, i) => (
-              <tr
-                key={i}
-                className={`border-b border-[#1e2a38] hover:bg-[#0d1520] transition-colors ${selectedStock?.stock === row.stock ? "bg-[#0d1520]" : ""}`}
-              >
-                <td className="px-4 py-3">
-                  <a
-                    href={`https://www.screener.in/company/${row.ticker}/consolidated/`}
-                    target="_blank"
-                    className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
-                  >
-                    {row.stock}
-                  </a>
-                </td>
+      {/* Grouped tables */}
+      <div className="space-y-6">
+        {sortedGroups.map(([industry, stocks]) => (
+          <div key={industry} className="rounded-lg border border-[#1e2a38] overflow-hidden">
 
-                <td className="px-4 py-3 font-mono text-gray-500 text-xs">{row.ticker}</td>
+            {/* Sector header */}
+            <div className="bg-[#0d1520] px-4 py-2.5 border-b border-[#1e2a38] flex items-center justify-between">
+              <span className="text-xs font-mono font-bold tracking-widest text-gray-400 uppercase">
+                {industry}
+              </span>
+              <span className="text-xs font-mono text-gray-600">{stocks.length} stock{stocks.length > 1 ? "s" : ""}</span>
+            </div>
 
-                <td className="px-4 py-3 font-mono font-bold">
-                  <span className={row.peDeviation < 0 ? "text-emerald-400" : "text-red-400"}>
-                    {row.peDeviation > 0 ? "+" : ""}{row.peDeviation.toFixed(1)}%
-                  </span>
-                </td>
-
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-0.5 rounded text-xs font-mono ${bandStyles[row.band]}`}>
-                    {row.valuation}
-                  </span>
-                </td>
-
-                <td className="px-4 py-3">
-                  <button
-                    onClick={() => setSelectedStock(row)}
-                    className="px-2 py-1 rounded text-xs font-mono bg-[#1e2a38] text-gray-400 hover:bg-blue-500/20 hover:text-blue-400 border border-[#2e3f54] hover:border-blue-400/30 transition-all"
-                  >
-                    {row.aiSummary ? "🤖 Summary" : "📋 Filings"}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[#1e2a38]">
+                  <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">Stock</th>
+                  <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">PE Deviation</th>
+                  <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">Valuation</th>
+                  <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {stocks.map((row, i) => (
+                  <tr key={i} className={`border-b border-[#1e2a38] last:border-0 hover:bg-[#0d1520] transition-colors ${selectedStock?.stock === row.stock ? "bg-[#0d1520]" : ""}`}>
+                    <td className="px-4 py-3">
+                      <a
+                        href={`https://www.screener.in/company/${row.ticker}/consolidated/`}
+                        target="_blank"
+                        className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                      >
+                        {row.stock}
+                      </a>
+                    </td>
+                    <td className="px-4 py-3 font-mono font-bold">
+                      <span className={row.peDeviation < 0 ? "text-emerald-400" : "text-red-400"}>
+                        {row.peDeviation > 0 ? "+" : ""}{row.peDeviation.toFixed(1)}%
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded text-xs font-mono ${bandStyles[row.band]}`}>
+                        {row.valuation}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => setSelectedStock(row)}
+                        className="px-2 py-1 rounded text-xs font-mono bg-[#1e2a38] text-gray-400 hover:bg-blue-500/20 hover:text-blue-400 border border-[#2e3f54] hover:border-blue-400/30 transition-all"
+                      >
+                        {row.aiSummary ? "🤖 Summary" : "📋 Filings"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
       </div>
 
       {selectedStock && (

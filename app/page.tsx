@@ -10,7 +10,7 @@ async function getData() {
 
   const coreRecords = await base("Core Universe")
     .select({
-      fields: ["Stock", "Ticker", "Latest Headlines", "Last News Update", "AI Summary", "Summary Date"]
+      fields: ["Stock", "Ticker", "Latest Headlines", "Last News Update", "AI Summary", "Summary Date", "Industry Hierarchy"]
     })
     .all();
 
@@ -23,6 +23,7 @@ async function getData() {
       lastUpdate:  r.fields["Last News Update"] ?? null,
       aiSummary:   r.fields["AI Summary"] ?? null,
       summaryDate: r.fields["Summary Date"] ?? null,
+      industry:    r.fields["Industry Hierarchy"] ?? null,
     };
   });
 
@@ -57,6 +58,7 @@ async function getData() {
       peDeviation,
       valuation,
       band,
+      industry:    stockInfo.industry,
       headlines:   stockInfo.headlines,
       lastUpdate:  stockInfo.lastUpdate,
       aiSummary:   stockInfo.aiSummary,
