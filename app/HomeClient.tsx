@@ -308,6 +308,14 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                 <col style={{ width: "25%" }} />
                 <col style={{ width: "15%" }} />
               </colgroup>
+              <thead>
+                <tr className="border-b border-[#1e2a38]">
+                  <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">Stock</th>
+                  <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">PE Deviation</th>
+                  <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">Valuation</th>
+                  <th className="px-4 py-2"></th>
+                </tr>
+              </thead>
               <tbody>
                 {stocks.map((row, i) => (
                   <tr key={i} className={`border-b border-[#1e2a38] last:border-0 hover:bg-[#0d1520] transition-colors ${selectedStock?.stock === row.stock ? "bg-[#0d1520]" : ""}`}>
