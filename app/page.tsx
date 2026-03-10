@@ -1,7 +1,7 @@
 import Airtable from "airtable";
 import HomeClient from "./HomeClient";
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
 async function getData() {
   const base = new Airtable({
@@ -9,16 +9,20 @@ async function getData() {
   }).base(process.env.AIRTABLE_BASE_ID as string);
 
   const coreRecords = await base("Core Universe")
-    .select({ fields: ["Stock", "Ticker", "Latest Headlines", "Last News Update"] })
+    .select({
+      fields: ["Stock", "Ticker", "Latest Headlines", "Last News Update", "AI Summary", "Summary Date"]
+    })
     .all();
 
   const stockMap: Record<string, any> = {};
   coreRecords.forEach((r: any) => {
     stockMap[r.id] = {
-      name: r.fields["Stock"],
-      ticker: r.fields["Ticker"]?.replace(".NS", "") ?? "",
-      headlines: r.fields["Latest Headlines"] ?? null,
-      lastUpdate: r.fields["Last News Update"] ?? null,
+      name:        r.fields["Stock"],
+      ticker:      (r.fields["Ticker"] as string)?.replace(".NS", "") ?? "",
+      headlines:   r.fields["Latest Headlines"] ?? null,
+      lastUpdate:  r.fields["Last News Update"] ?? null,
+      aiSummary:   r.fields["AI Summary"] ?? null,
+      summaryDate: r.fields["Summary Date"] ?? null,
     };
   });
 
@@ -42,19 +46,21 @@ async function getData() {
 
     let valuation = "Fair";
     let band = "fair";
-    if (peDeviation <= -20) { valuation = "Cheap"; band = "cheap"; }
+    if (peDeviation <= -20)      { valuation = "Cheap";           band = "cheap"; }
     else if (peDeviation <= -10) { valuation = "Slight Discount"; band = "discount"; }
-    else if (peDeviation >= 20) { valuation = "Expensive"; band = "expensive"; }
-    else if (peDeviation >= 10) { valuation = "Slight Premium"; band = "premium"; }
+    else if (peDeviation >= 20)  { valuation = "Expensive";       band = "expensive"; }
+    else if (peDeviation >= 10)  { valuation = "Slight Premium";  band = "premium"; }
 
     latestByStock[stock] = {
       stock,
-      ticker: stockInfo.ticker,
+      ticker:      stockInfo.ticker,
       peDeviation,
       valuation,
       band,
-      headlines: stockInfo.headlines,
-      lastUpdate: stockInfo.lastUpdate,
+      headlines:   stockInfo.headlines,
+      lastUpdate:  stockInfo.lastUpdate,
+      aiSummary:   stockInfo.aiSummary,
+      summaryDate: stockInfo.summaryDate,
     };
   });
 
