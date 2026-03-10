@@ -301,15 +301,13 @@ export default function HomeClient({ data }: { data: Stock[] }) {
               <span className="text-xs font-mono text-gray-600">{stocks.length} stock{stocks.length > 1 ? "s" : ""}</span>
             </div>
 
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[#1e2a38]">
-                  <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">Stock</th>
-                  <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">PE Deviation</th>
-                  <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">Valuation</th>
-                  <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium"></th>
-                </tr>
-              </thead>
+            <table className="w-full text-sm table-fixed">
+              <colgroup>
+                <col style={{ width: "40%" }} />
+                <col style={{ width: "20%" }} />
+                <col style={{ width: "25%" }} />
+                <col style={{ width: "15%" }} />
+              </colgroup>
               <tbody>
                 {stocks.map((row, i) => (
                   <tr key={i} className={`border-b border-[#1e2a38] last:border-0 hover:bg-[#0d1520] transition-colors ${selectedStock?.stock === row.stock ? "bg-[#0d1520]" : ""}`}>
