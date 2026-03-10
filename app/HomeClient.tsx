@@ -56,40 +56,58 @@ function parseHeadlines(raw: string): Section[] {
   return sections;
 }
 
-// Render AI summary text with emoji section headers styled nicely
+// Render inline bold: **text** → <strong>
+function renderInline(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) =>
+    part.startsWith("**") && part.endsWith("**")
+      ? <strong key={i} className="text-white font-semibold">{part.slice(2, -2)}</strong>
+      : <span key={i}>{part}</span>
+  );
+}
+
 function AISummary({ text }: { text: string }) {
   const lines = text.split("\n");
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-1">
       {lines.map((line, i) => {
         const trimmed = line.trim();
-        if (!trimmed) return null;
 
-        // Section headers: lines starting with emoji
-        if (/^(📊|🏭|📰|✅)/.test(trimmed)) {
+        // Skip empty lines, --- dividers, raw markdown headers without emoji
+        if (!trimmed || trimmed === "---" || trimmed === "—--") return null;
+        if (/^#{1,3}\s/.test(trimmed) && !/^(📊|🏭|📰|✅)/.test(trimmed.replace(/^#{1,3}\s/, ""))) return null;
+
+        // Strip leading ## from section headers
+        const clean = trimmed.replace(/^#{1,3}\s*/, "");
+
+        // Section headers with emoji
+        if (/^(📊|🏭|📰|✅)/.test(clean)) {
           return (
-            <div key={i} className="pt-1">
-              <div className="text-xs font-mono font-bold tracking-widest text-gray-400 uppercase mb-1">
-                {trimmed}
+            <div key={i} className="pt-4 first:pt-0">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-bold text-white">{clean}</span>
               </div>
             </div>
           );
         }
 
+        // Date/title header lines (e.g. "ONGC — Daily Briefing", "10 March 2026")
+        if (/Daily Briefing|^\*\*\d+/.test(clean)) return null;
+
         // Updated line
-        if (trimmed.startsWith("_Updated:")) {
+        if (clean.startsWith("_Updated:") || clean.startsWith("Updated:")) {
           return (
-            <div key={i} className="text-xs text-gray-600 font-mono pt-2 border-t border-[#1e2a38]">
-              {trimmed.replace(/_/g, "")}
+            <div key={i} className="text-xs text-gray-600 font-mono pt-3 mt-2 border-t border-[#1e2a38]">
+              {clean.replace(/_/g, "")}
             </div>
           );
         }
 
-        // Regular content
+        // Regular paragraph
         return (
           <p key={i} className="text-sm text-gray-300 leading-relaxed">
-            {trimmed}
+            {renderInline(clean)}
           </p>
         );
       })}
