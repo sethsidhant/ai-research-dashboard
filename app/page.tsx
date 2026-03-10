@@ -1,149 +1,75 @@
 import Airtable from "airtable";
+import HomeClient from "./HomeClient";
 
-export default async function Home() {
+export const revalidate = 3600;
 
-  const apiKey = process.env.AIRTABLE_API_KEY as string;
-  const baseId = process.env.AIRTABLE_BASE_ID as string;
-
+async function getData() {
   const base = new Airtable({
-    apiKey: apiKey
-  }).base(baseId);
+    apiKey: process.env.AIRTABLE_API_KEY as string,
+  }).base(process.env.AIRTABLE_BASE_ID as string);
 
   const coreRecords = await base("Core Universe")
-    .select({})
+    .select({ fields: ["Stock", "Ticker", "Latest Headlines", "Last News Update"] })
     .all();
 
-  const stockMap: any = {};
-
+  const stockMap: Record<string, any> = {};
   coreRecords.forEach((r: any) => {
-
     stockMap[r.id] = {
       name: r.fields["Stock"],
-      ticker: r.fields["Ticker"]
+      ticker: r.fields["Ticker"]?.replace(".NS", "") ?? "",
+      headlines: r.fields["Latest Headlines"] ?? null,
+      lastUpdate: r.fields["Last News Update"] ?? null,
     };
-
   });
 
   const records = await base("Daily Scores")
-    .select({
-      sort: [{ field: "Date", direction: "desc" }]
-    })
+    .select({ sort: [{ field: "Date", direction: "desc" }] })
     .all();
 
-  const latestByStock: any = {};
+  const latestByStock: Record<string, any> = {};
 
   records.forEach((record: any) => {
-
     const fields = record.fields;
-
     const stockLink = fields["Stock Link"];
     const peDeviation = fields["PE Deviation %"];
+    if (!stockLink?.length || peDeviation == null) return;
 
-    if (!stockLink || stockLink.length === 0) return;
-    if (peDeviation === undefined || peDeviation === null) return;
-
-    const stockId = stockLink[0];
-
-    const stockInfo = stockMap[stockId];
-
+    const stockInfo = stockMap[stockLink[0]];
     if (!stockInfo) return;
 
     const stock = stockInfo.name;
-    const ticker = stockInfo.ticker;
+    if (latestByStock[stock]) return;
 
-    if (!latestByStock[stock]) {
+    let valuation = "Fair";
+    let band = "fair";
+    if (peDeviation <= -20) { valuation = "Cheap"; band = "cheap"; }
+    else if (peDeviation <= -10) { valuation = "Slight Discount"; band = "discount"; }
+    else if (peDeviation >= 20) { valuation = "Expensive"; band = "expensive"; }
+    else if (peDeviation >= 10) { valuation = "Slight Premium"; band = "premium"; }
 
-      let valuation = "Fair";
-      let color = "text-gray-300";
-
-      if (peDeviation <= -20) {
-        valuation = "Cheap";
-        color = "text-green-400";
-      }
-
-      if (peDeviation >= 20) {
-        valuation = "Expensive";
-        color = "text-red-400";
-      }
-
-      latestByStock[stock] = {
-        stock,
-        ticker,
-        peDeviation,
-        valuation,
-        color
-      };
-
-    }
-
+    latestByStock[stock] = {
+      stock,
+      ticker: stockInfo.ticker,
+      peDeviation,
+      valuation,
+      band,
+      headlines: stockInfo.headlines,
+      lastUpdate: stockInfo.lastUpdate,
+      compositeScore: fields["Composite Score"] ?? null,
+      classification: fields["Classification"] ?? null,
+      suggestedAction: fields["Suggested Action"] ?? null,
+      structuralScore: fields["Structural Score"] ?? null,
+      earningsScore: fields["Earnings Score"] ?? null,
+      riskScore: fields["Risk Score"] ?? null,
+    };
   });
 
-  let data: any = Object.values(latestByStock);
-
-  // SORT BY PE DEVIATION (CHEAPEST FIRST)
-
-  data = data.sort((a: any, b: any) => a.peDeviation - b.peDeviation);
-
-  return (
-
-    <main className="p-10 bg-black min-h-screen text-white">
-
-      <h1 className="text-3xl font-bold mb-8">
-        AI Research Desk – Valuation Heatmap
-      </h1>
-
-      <table className="border border-gray-700 w-full text-center">
-
-        <thead className="bg-gray-900">
-
-          <tr>
-            <th className="p-3 border border-gray-700">Stock</th>
-            <th className="p-3 border border-gray-700">PE Deviation</th>
-            <th className="p-3 border border-gray-700">Valuation</th>
-          </tr>
-
-        </thead>
-
-        <tbody>
-
-          {data.map((row: any, i: number) => (
-
-            <tr key={i} className="hover:bg-gray-800">
-
-              <td className="p-3 border border-gray-700">
-
-                <a
-                  href={"https://www.screener.in/company/" + row.ticker + "/consolidated/"}
-                  target="_blank"
-                  style={{ color: "#60a5fa" }}
-                >
-                  {row.stock}
-                </a>
-
-              </td>
-
-              <td className="p-3 border border-gray-700">
-
-                {row.peDeviation.toFixed(1)}%
-
-              </td>
-
-              <td className={"p-3 border border-gray-700 font-semibold " + row.color}>
-
-                {row.valuation}
-
-              </td>
-
-            </tr>
-
-          ))}
-
-        </tbody>
-
-      </table>
-
-    </main>
-
+  return Object.values(latestByStock).sort(
+    (a: any, b: any) => a.peDeviation - b.peDeviation
   );
+}
 
+export default async function Page() {
+  const data = await getData();
+  return <HomeClient data={data} />;
 }
