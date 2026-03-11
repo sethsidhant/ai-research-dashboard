@@ -9,10 +9,18 @@ type Stock = {
   valuation: string;
   band: string;
   industry: string | null;
+  industryPEHigh: string | null;
+  industryPELow: string | null;
   headlines: string | null;
   lastUpdate: string | null;
   aiSummary: string | null;
   summaryDate: string | null;
+  rsi: number | null;
+  rsiSignal: string | null;
+  above50DMA: boolean;
+  above200DMA: boolean;
+  classification: string | null;
+  suggestedAction: string | null;
 };
 
 type FilingItem = {
@@ -101,12 +109,30 @@ function AISummary({ text }: { text: string }) {
 }
 
 const bandStyles: Record<string, string> = {
-  cheap: "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20",
+  cheap:    "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20",
   discount: "text-emerald-300 bg-emerald-300/10 border border-emerald-300/20",
-  fair: "text-gray-400 bg-gray-400/10 border border-gray-400/20",
-  premium: "text-amber-400 bg-amber-400/10 border border-amber-400/20",
-  expensive: "text-red-400 bg-red-400/10 border border-red-400/20",
+  fair:     "text-gray-400 bg-gray-400/10 border border-gray-400/20",
+  premium:  "text-amber-400 bg-amber-400/10 border border-amber-400/20",
+  expensive:"text-red-400 bg-red-400/10 border border-red-400/20",
 };
+
+function rsiColor(rsi: number | null): string {
+  if (rsi === null) return "text-gray-500";
+  if (rsi < 30) return "text-emerald-400";
+  if (rsi > 70) return "text-red-400";
+  return "text-gray-300";
+}
+
+function rsiSignalStyle(signal: string | null): string {
+  switch (signal) {
+    case "Oversold":      return "text-emerald-400 bg-emerald-400/10 border-emerald-400/20";
+    case "Weakening":     return "text-emerald-300 bg-emerald-300/10 border-emerald-300/20";
+    case "Neutral":       return "text-gray-400 bg-gray-400/10 border-gray-400/20";
+    case "Strengthening": return "text-amber-400 bg-amber-400/10 border-amber-400/20";
+    case "Overbought":    return "text-red-400 bg-red-400/10 border-red-400/20";
+    default:              return "text-gray-600 bg-gray-600/10 border-gray-600/20";
+  }
+}
 
 type Tab = "summary" | "filings";
 
@@ -132,10 +158,34 @@ function SidePanel({ stock, onClose }: { stock: Stock; onClose: () => void }) {
                 <span className={`px-2 py-0.5 rounded text-xs font-mono ${bandStyles[stock.band]}`}>
                   {stock.valuation}
                 </span>
+                {stock.suggestedAction && (
+                  <span className="px-2 py-0.5 rounded text-xs font-mono bg-blue-400/10 text-blue-400 border border-blue-400/20">
+                    {stock.suggestedAction}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-3 mt-1 flex-wrap">
                 <span className={`text-sm font-mono font-bold ${stock.peDeviation < 0 ? "text-emerald-400" : "text-red-400"}`}>
-                  {stock.peDeviation > 0 ? "+" : ""}{stock.peDeviation.toFixed(1)}% PE deviation
+                  {stock.peDeviation > 0 ? "+" : ""}{stock.peDeviation.toFixed(1)}% PE dev
+                </span>
+                {stock.rsi !== null && (
+                  <span className={`text-sm font-mono font-bold ${rsiColor(stock.rsi)}`}>
+                    RSI {stock.rsi}
+                  </span>
+                )}
+                {stock.rsiSignal && (
+                  <span className={`px-2 py-0.5 rounded text-xs font-mono border ${rsiSignalStyle(stock.rsiSignal)}`}>
+                    {stock.rsiSignal}
+                  </span>
+                )}
+              </div>
+              {/* DMA indicators */}
+              <div className="flex items-center gap-3 mt-1.5">
+                <span className={`text-xs font-mono ${stock.above50DMA ? "text-emerald-400" : "text-red-400"}`}>
+                  {stock.above50DMA ? "✓" : "✗"} 50 DMA
+                </span>
+                <span className={`text-xs font-mono ${stock.above200DMA ? "text-emerald-400" : "text-red-400"}`}>
+                  {stock.above200DMA ? "✓" : "✗"} 200 DMA
                 </span>
                 {stock.industry && (
                   <span className="text-xs text-gray-500 font-mono">{stock.industry}</span>
@@ -272,11 +322,11 @@ export default function HomeClient({ data }: { data: Stock[] }) {
       {/* Summary chips */}
       <div className="flex gap-3 mb-6 flex-wrap">
         {[
-          { label: "Cheap", band: "cheap" },
+          { label: "Cheap",    band: "cheap" },
           { label: "Discount", band: "discount" },
-          { label: "Fair", band: "fair" },
-          { label: "Premium", band: "premium" },
-          { label: "Expensive", band: "expensive" },
+          { label: "Fair",     band: "fair" },
+          { label: "Premium",  band: "premium" },
+          { label: "Expensive",band: "expensive" },
         ].map((b) => {
           const count = data.filter((d) => d.band === b.band).length;
           if (count === 0) return null;
@@ -290,68 +340,117 @@ export default function HomeClient({ data }: { data: Stock[] }) {
 
       {/* Grouped tables */}
       <div className="space-y-6">
-        {sortedGroups.map(([industry, stocks]) => (
-          <div key={industry} className="rounded-lg border border-[#1e2a38] overflow-hidden">
+        {sortedGroups.map(([industry, stocks]) => {
+          // Get Industry PE High/Low from first stock in group that has it
+          const peHighStock = stocks.find(s => s.industryPEHigh);
+          const peLowStock  = stocks.find(s => s.industryPELow);
 
-            {/* Sector header */}
-            <div className="bg-[#0d1520] px-4 py-2.5 border-b border-[#1e2a38] flex items-center justify-between">
-              <span className="text-xs font-mono font-bold tracking-widest text-gray-400 uppercase">
-                {industry}
-              </span>
-              <span className="text-xs font-mono text-gray-600">{stocks.length} stock{stocks.length > 1 ? "s" : ""}</span>
-            </div>
+          return (
+            <div key={industry} className="rounded-lg border border-[#1e2a38] overflow-hidden">
 
-            <table className="w-full text-sm table-fixed">
-              <colgroup>
-                <col style={{ width: "40%" }} />
-                <col style={{ width: "20%" }} />
-                <col style={{ width: "25%" }} />
-                <col style={{ width: "15%" }} />
-              </colgroup>
-              <thead>
-                <tr className="border-b border-[#1e2a38]">
-                  <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">Stock</th>
-                  <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">PE Deviation</th>
-                  <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">Valuation</th>
-                  <th className="px-4 py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {stocks.map((row, i) => (
-                  <tr key={i} className={`border-b border-[#1e2a38] last:border-0 hover:bg-[#0d1520] transition-colors ${selectedStock?.stock === row.stock ? "bg-[#0d1520]" : ""}`}>
-                    <td className="px-4 py-3">
-                      <a
-                        href={`https://www.screener.in/company/${row.ticker}/consolidated/`}
-                        target="_blank"
-                        className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
-                      >
-                        {row.stock}
-                      </a>
-                    </td>
-                    <td className="px-4 py-3 font-mono font-bold">
-                      <span className={row.peDeviation < 0 ? "text-emerald-400" : "text-red-400"}>
-                        {row.peDeviation > 0 ? "+" : ""}{row.peDeviation.toFixed(1)}%
+              {/* Sector header */}
+              <div className="bg-[#0d1520] px-4 py-2.5 border-b border-[#1e2a38]">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold tracking-widest text-gray-400 uppercase">
+                    {industry}
+                  </span>
+                  <span className="text-xs font-mono text-gray-600">{stocks.length} stock{stocks.length > 1 ? "s" : ""}</span>
+                </div>
+                {/* Industry PE range */}
+                {(peHighStock || peLowStock) && (
+                  <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                    <span className="text-xs font-mono text-gray-600">Industry PE:</span>
+                    {peLowStock?.industryPELow && (
+                      <span className="text-xs font-mono text-emerald-400/80">
+                        ↓ Low: {peLowStock.industryPELow}
                       </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-mono ${bandStyles[row.band]}`}>
-                        {row.valuation}
+                    )}
+                    {peHighStock?.industryPEHigh && (
+                      <span className="text-xs font-mono text-red-400/80">
+                        ↑ High: {peHighStock.industryPEHigh}
                       </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => setSelectedStock(row)}
-                        className="px-2 py-1 rounded text-xs font-mono bg-[#1e2a38] text-gray-400 hover:bg-blue-500/20 hover:text-blue-400 border border-[#2e3f54] hover:border-blue-400/30 transition-all"
-                      >
-                        {row.aiSummary ? "🤖 Summary" : "📋 Filings"}
-                      </button>
-                    </td>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <table className="w-full text-sm table-fixed">
+                <colgroup>
+                  <col style={{ width: "28%" }} />
+                  <col style={{ width: "15%" }} />
+                  <col style={{ width: "18%" }} />
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "9%" }} />
+                </colgroup>
+                <thead>
+                  <tr className="border-b border-[#1e2a38]">
+                    <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">Stock</th>
+                    <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">PE Dev</th>
+                    <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">Valuation</th>
+                    <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">RSI</th>
+                    <th className="px-4 py-2 text-center text-xs font-mono text-gray-600 font-medium">50D</th>
+                    <th className="px-4 py-2 text-center text-xs font-mono text-gray-600 font-medium">200D</th>
+                    <th className="px-4 py-2"></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ))}
+                </thead>
+                <tbody>
+                  {stocks.map((row, i) => (
+                    <tr key={i} className={`border-b border-[#1e2a38] last:border-0 hover:bg-[#0d1520] transition-colors ${selectedStock?.stock === row.stock ? "bg-[#0d1520]" : ""}`}>
+                      <td className="px-4 py-3">
+                        <a
+                          href={`https://www.screener.in/company/${row.ticker}/consolidated/`}
+                          target="_blank"
+                          className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                        >
+                          {row.stock}
+                        </a>
+                      </td>
+                      <td className="px-4 py-3 font-mono font-bold">
+                        <span className={row.peDeviation < 0 ? "text-emerald-400" : "text-red-400"}>
+                          {row.peDeviation > 0 ? "+" : ""}{row.peDeviation.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded text-xs font-mono ${bandStyles[row.band]}`}>
+                          {row.valuation}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {row.rsi !== null ? (
+                          <span className={`font-mono text-sm font-bold ${rsiColor(row.rsi)}`}>
+                            {row.rsi}
+                          </span>
+                        ) : (
+                          <span className="text-gray-600 font-mono text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`font-mono text-sm font-bold ${row.above50DMA ? "text-emerald-400" : "text-red-400"}`}>
+                          {row.above50DMA ? "✓" : "✗"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`font-mono text-sm font-bold ${row.above200DMA ? "text-emerald-400" : "text-red-400"}`}>
+                          {row.above200DMA ? "✓" : "✗"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => setSelectedStock(row)}
+                          className="px-2 py-1 rounded text-xs font-mono bg-[#1e2a38] text-gray-400 hover:bg-blue-500/20 hover:text-blue-400 border border-[#2e3f54] hover:border-blue-400/30 transition-all"
+                        >
+                          {row.aiSummary ? "🤖" : "📋"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })}
       </div>
 
       {selectedStock && (

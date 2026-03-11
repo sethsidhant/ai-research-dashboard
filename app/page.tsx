@@ -10,20 +10,22 @@ async function getData() {
 
   const coreRecords = await base("Core Universe")
     .select({
-      fields: ["Stock", "Ticker", "Latest Headlines", "Last News Update", "AI Summary", "Summary Date", "Industry Hierarchy"]
+      fields: ["Stock", "Ticker", "Latest Headlines", "Last News Update", "AI Summary", "Summary Date", "Industry Hierarchy", "Industry PE High", "Industry PE Low"]
     })
     .all();
 
   const stockMap: Record<string, any> = {};
   coreRecords.forEach((r: any) => {
     stockMap[r.id] = {
-      name:        r.fields["Stock"],
-      ticker:      (r.fields["Ticker"] as string)?.replace(".NS", "") ?? "",
-      headlines:   r.fields["Latest Headlines"] ?? null,
-      lastUpdate:  r.fields["Last News Update"] ?? null,
-      aiSummary:   r.fields["AI Summary"] ?? null,
-      summaryDate: r.fields["Summary Date"] ?? null,
-      industry:    r.fields["Industry Hierarchy"] ?? null,
+      name:           r.fields["Stock"],
+      ticker:         (r.fields["Ticker"] as string)?.replace(".NS", "") ?? "",
+      headlines:      r.fields["Latest Headlines"] ?? null,
+      lastUpdate:     r.fields["Last News Update"] ?? null,
+      aiSummary:      r.fields["AI Summary"] ?? null,
+      summaryDate:    r.fields["Summary Date"] ?? null,
+      industry:       r.fields["Industry Hierarchy"] ?? null,
+      industryPEHigh: r.fields["Industry PE High"] ?? null,
+      industryPELow:  r.fields["Industry PE Low"] ?? null,
     };
   });
 
@@ -54,15 +56,23 @@ async function getData() {
 
     latestByStock[stock] = {
       stock,
-      ticker:      stockInfo.ticker,
+      ticker:         stockInfo.ticker,
       peDeviation,
       valuation,
       band,
-      industry:    stockInfo.industry,
-      headlines:   stockInfo.headlines,
-      lastUpdate:  stockInfo.lastUpdate,
-      aiSummary:   stockInfo.aiSummary,
-      summaryDate: stockInfo.summaryDate,
+      industry:       stockInfo.industry,
+      industryPEHigh: stockInfo.industryPEHigh,
+      industryPELow:  stockInfo.industryPELow,
+      headlines:      stockInfo.headlines,
+      lastUpdate:     stockInfo.lastUpdate,
+      aiSummary:      stockInfo.aiSummary,
+      summaryDate:    stockInfo.summaryDate,
+      rsi:            fields["RSI"] ?? null,
+      rsiSignal:      fields["RSI Signal"] ?? null,
+      above50DMA:     fields["Above 50 DMA"] ?? false,
+      above200DMA:    fields["Above 200 DMA"] ?? false,
+      classification: fields["Classification"] ?? null,
+      suggestedAction: fields["Suggested Action"] ?? null,
     };
   });
 
