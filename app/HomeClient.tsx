@@ -82,9 +82,9 @@ function AISummary({ text }: { text: string }) {
       {lines.map((line, i) => {
         const trimmed = line.trim();
         if (!trimmed || trimmed === "---" || trimmed === "—--") return null;
-        if (/^#{1,3}\s/.test(trimmed) && !/^(📊|🏭|📰|✅)/.test(trimmed.replace(/^#{1,3}\s/, ""))) return null;
+        if (/^#{1,3}\s/.test(trimmed) && !/^[\u{1F300}-\u{1FFFF}]/u.test(trimmed.replace(/^#{1,3}\s/, ""))) return null;
         const clean = trimmed.replace(/^#{1,3}\s*/, "");
-        if (/^(📊|🏭|📰|✅)/.test(clean)) {
+        if (/^[\u{1F300}-\u{1FFFF}]/u.test(clean)) {
           return (
             <div key={i} className="pt-4 first:pt-0">
               <div className="text-sm font-bold text-white mb-2">{clean}</div>
