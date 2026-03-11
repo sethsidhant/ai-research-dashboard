@@ -10,7 +10,7 @@ async function getData() {
 
   const coreRecords = await base("Core Universe")
     .select({
-      fields: ["Stock", "Ticker", "Latest Headlines", "Last News Update", "AI Summary", "Summary Date", "Industry Hierarchy", "Industry PE High", "Industry PE Low"]
+      fields: ["Stock", "Ticker", "Latest Headlines", "Last News Update", "AI Summary", "Summary Date", "Industry Hierarchy", "Industry PE", "Industry PE High", "Industry PE Low"]
     })
     .all();
 
@@ -24,6 +24,7 @@ async function getData() {
       aiSummary:      r.fields["AI Summary"] ?? null,
       summaryDate:    r.fields["Summary Date"] ?? null,
       industry:       r.fields["Industry Hierarchy"] ?? null,
+      industryPE:     r.fields["Industry PE"] ?? null,
       industryPEHigh: r.fields["Industry PE High"] ?? null,
       industryPELow:  r.fields["Industry PE Low"] ?? null,
     };
@@ -47,12 +48,20 @@ async function getData() {
     const stock = stockInfo.name;
     if (latestByStock[stock]) return;
 
-    let valuation = "Fair";
+    // Use Claude's PE Classification directly
+    const classification = fields["Classification"] ?? null;
+    let valuation = classification ?? "Fair";
     let band = "fair";
-    if (peDeviation <= -20)      { valuation = "Cheap";           band = "cheap"; }
-    else if (peDeviation <= -10) { valuation = "Slight Discount"; band = "discount"; }
-    else if (peDeviation >= 20)  { valuation = "Expensive";       band = "expensive"; }
-    else if (peDeviation >= 10)  { valuation = "Slight Premium";  band = "premium"; }
+    if (classification === "Undervalued")   band = "cheap";
+    else if (classification === "Fairly Valued") band = "fair";
+    else if (classification === "Overvalued")    band = "expensive";
+    else if (classification === "High Quality")  band = "premium";
+    else if (classification === "Speculative")   band = "discount";
+    // Fallback to PE deviation if no classification
+    else if (peDeviation <= -20)      { valuation = "Cheap";          band = "cheap"; }
+    else if (peDeviation <= -10)      { valuation = "Slight Discount"; band = "discount"; }
+    else if (peDeviation >= 20)       { valuation = "Expensive";       band = "expensive"; }
+    else if (peDeviation >= 10)       { valuation = "Slight Premium";  band = "premium"; }
 
     latestByStock[stock] = {
       stock,
@@ -61,6 +70,7 @@ async function getData() {
       valuation,
       band,
       industry:       stockInfo.industry,
+      industryPE:     stockInfo.industryPE,
       industryPEHigh: stockInfo.industryPEHigh,
       industryPELow:  stockInfo.industryPELow,
       headlines:      stockInfo.headlines,

@@ -9,6 +9,7 @@ type Stock = {
   valuation: string;
   band: string;
   industry: string | null;
+  industryPE: number | null;
   industryPEHigh: string | null;
   industryPELow: string | null;
   headlines: string | null;
@@ -338,6 +339,14 @@ export default function HomeClient({ data }: { data: Stock[] }) {
         })}
       </div>
 
+      {/* Industry PE footnote */}
+      <div className="mb-4 px-3 py-2 rounded border border-[#1e2a38] bg-[#0d1520] inline-flex items-center gap-2">
+        <span className="text-gray-600 text-xs">ℹ</span>
+        <span className="text-xs font-mono text-gray-600">
+          Industry PE based on companies with mcap &gt; ₹5,000 Cr only
+        </span>
+      </div>
+
       {/* Grouped tables */}
       <div className="space-y-6">
         {sortedGroups.map(([industry, stocks]) => {
@@ -360,14 +369,19 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                 {(peHighStock || peLowStock) && (
                   <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                     <span className="text-xs font-mono text-gray-600">Industry PE:</span>
+                    {peHighStock?.industryPE && (
+                      <span className="text-xs font-mono text-gray-400 font-bold">
+                        Median {peHighStock.industryPE}x
+                      </span>
+                    )}
                     {peLowStock?.industryPELow && (
                       <span className="text-xs font-mono text-emerald-400/80">
-                        ↓ Low: {peLowStock.industryPELow}
+                        · ↓ Low: {peLowStock.industryPELow}
                       </span>
                     )}
                     {peHighStock?.industryPEHigh && (
                       <span className="text-xs font-mono text-red-400/80">
-                        ↑ High: {peHighStock.industryPEHigh}
+                        · ↑ High: {peHighStock.industryPEHigh}
                       </span>
                     )}
                   </div>
