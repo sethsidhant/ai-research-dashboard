@@ -1,97 +1,81 @@
-import Airtable from "airtable";
+import { google } from "googleapis";
+import path from "path";
 import HomeClient from "./HomeClient";
 
 export const revalidate = 300;
 
-async function getData() {
-  const base = new Airtable({
-    apiKey: process.env.AIRTABLE_API_KEY as string,
-  }).base(process.env.AIRTABLE_BASE_ID as string);
+const SHEET_ID = process.env.GOOGLE_SHEET_ID!;
 
-  const coreRecords = await base("Core Universe")
-    .select({
-      fields: ["Stock", "Ticker", "Latest Headlines", "Last News Update", "AI Summary", "Summary Date", "Industry Hierarchy", "Industry PE", "Industry PE High", "Industry PE Low"]
-    })
-    .all();
-
-  const stockMap: Record<string, any> = {};
-  coreRecords.forEach((r: any) => {
-    stockMap[r.id] = {
-      name:           r.fields["Stock"],
-      ticker:         (r.fields["Ticker"] as string)?.replace(".NS", "") ?? "",
-      headlines:      r.fields["Latest Headlines"] ?? null,
-      lastUpdate:     r.fields["Last News Update"] ?? null,
-      aiSummary:      r.fields["AI Summary"] ?? null,
-      summaryDate:    r.fields["Summary Date"] ?? null,
-      industry:       r.fields["Industry Hierarchy"] ?? null,
-      industryPE:     r.fields["Industry PE"] ?? null,
-      industryPEHigh: r.fields["Industry PE High"] ?? null,
-      industryPELow:  r.fields["Industry PE Low"] ?? null,
-    };
+async function getSheetsClient() {
+  const creds = require(path.join(process.cwd(), "credentials.json"));
+  const auth = new google.auth.GoogleAuth({
+    credentials: creds,
+    scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
   });
-
-  const records = await base("Daily Scores")
-    .select({ sort: [{ field: "Date", direction: "desc" }] })
-    .all();
-
-  const latestByStock: Record<string, any> = {};
-
-  records.forEach((record: any) => {
-    const fields = record.fields;
-    const stockLink = fields["Stock Link"];
-    const peDeviation = fields["PE Deviation %"];
-    if (!stockLink?.length || peDeviation == null) return;
-
-    const stockInfo = stockMap[stockLink[0]];
-    if (!stockInfo) return;
-
-    const stock = stockInfo.name;
-    if (latestByStock[stock]) return;
-
-    // Use Claude's PE Classification directly
-    const classification = fields["Classification"] ?? null;
-    let valuation = classification ?? "Fair";
-    let band = "fair";
-    if (classification === "Undervalued")   band = "cheap";
-    else if (classification === "Fairly Valued") band = "fair";
-    else if (classification === "Overvalued")    band = "expensive";
-    else if (classification === "High Quality")  band = "premium";
-    else if (classification === "Speculative")   band = "discount";
-    // Fallback to PE deviation if no classification
-    else if (peDeviation <= -20)      { valuation = "Cheap";          band = "cheap"; }
-    else if (peDeviation <= -10)      { valuation = "Slight Discount"; band = "discount"; }
-    else if (peDeviation >= 20)       { valuation = "Expensive";       band = "expensive"; }
-    else if (peDeviation >= 10)       { valuation = "Slight Premium";  band = "premium"; }
-
-    latestByStock[stock] = {
-      stock,
-      ticker:         stockInfo.ticker,
-      peDeviation,
-      valuation,
-      band,
-      industry:       stockInfo.industry,
-      industryPE:     stockInfo.industryPE,
-      industryPEHigh: stockInfo.industryPEHigh,
-      industryPELow:  stockInfo.industryPELow,
-      headlines:      stockInfo.headlines,
-      lastUpdate:     stockInfo.lastUpdate,
-      aiSummary:      stockInfo.aiSummary,
-      summaryDate:    stockInfo.summaryDate,
-      rsi:            fields["RSI"] ?? null,
-      rsiSignal:      fields["RSI Signal"] ?? null,
-      above50DMA:     fields["Above 50 DMA"] ?? false,
-      above200DMA:    fields["Above 200 DMA"] ?? false,
-      classification: fields["Classification"] ?? null,
-      suggestedAction: fields["Suggested Action"] ?? null,
-    };
-  });
-
-  return Object.values(latestByStock).sort(
-    (a: any, b: any) => a.peDeviation - b.peDeviation
-  );
+  const client = await auth.getClient();
+  return google.sheets({ version: "v4", auth: client as any });
 }
 
-export default async function Page() {
-  const data = await getData();
-  return <HomeClient data={data} />;
+async function getSheetData(sheetName: string) {
+  const sheets = await getSheetsClient();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: sheetName,
+  });
+  const rows = res.data.values || [];
+  if (rows.length < 2) return [];
+  const headers = rows[0];
+  return rows.slice(1).map((row) => {
+    const obj: Record<string, any> = {};
+    headers.forEach((h: string, j: number) => {
+      let val: any = row[j] ?? null;
+      if (val === "TRUE") val = true;
+      else if (val === "FALSE") val = false;
+      else if (val !== null && val !== "" && !isNaN(val)) val = Number(val);
+      obj[h] = val;
+    });
+    return obj;
+  });
+}
+
+export default async function Home() {
+  const [coreRows, scoreRows] = await Promise.all([
+    getSheetData("Core Universe"),
+    getSheetData("Daily Scores"),
+  ]);
+
+  // Build scores lookup by stock name
+  const scoresMap: Record<string, any> = {};
+  scoreRows.forEach((s) => { scoresMap[s["Stock"]] = s; });
+
+  const stocks = coreRows.map((stock) => {
+    const scores = scoresMap[stock["Stock"]] || {};
+    return {
+      name:             stock["Stock"],
+      ticker:           stock["Ticker"],
+      bseCode:          stock["BSE Code"],
+      industryPE:       stock["Industry PE"],
+      industryPEHigh:   stock["Industry PE High"],
+      industryPELow:    stock["Industry PE Low"],
+      stockPE:          stock["Stock PE"],
+      roe:              stock["ROE %"],
+      roce:             stock["ROCE %"],
+      marketCap:        stock["Market Cap"],
+      industry:         stock["Industry Hierarchy"],
+      headlines:        stock["Latest Headlines"],
+      lastNewsUpdate:   stock["Last News Update"],
+      aiSummary:        stock["AI Summary"],
+      summaryDate:      stock["Summary Date"],
+      peDeviation:      scores["PE Deviation %"],
+      rsi:              scores["RSI"],
+      rsiSignal:        scores["RSI Signal"],
+      above50DMA:       scores["Above 50 DMA"],
+      above200DMA:      scores["Above 200 DMA"],
+      compositeScore:   scores["Composite Score"],
+      classification:   scores["Classification"],
+      suggestedAction:  scores["Suggested Action"],
+    };
+  });
+
+  return <HomeClient stocks={stocks} />;
 }
