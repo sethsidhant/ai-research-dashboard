@@ -77,5 +77,5 @@ export default async function Home() {
     };
   });
 
-  return <HomeClient stocks={stocks} />;
+  return <HomeClient data={stocks} />;
 }
