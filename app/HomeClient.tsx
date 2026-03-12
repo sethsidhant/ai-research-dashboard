@@ -470,14 +470,6 @@ export default function HomeClient({ data }: { data: Stock[] }) {
           const peHighStock = stocks.find(s => s.industryPEHigh);
           const peLowStock  = stocks.find(s => s.industryPELow);
 
-          // Get returns from first stock that has them (all stocks in a sector share NIFTY50 + sector index returns)
-          const returnsStock = stocks.find(s => s.nifty50_6M != null);
-
-          // Helper: colour-code a return % vs benchmark
-          const retColor = (stock: number | null, bench: number | null) => {
-            if (stock == null || bench == null) return "text-gray-500";
-            return stock >= bench ? "text-emerald-400" : "text-red-400";
-          };
           const fmt = (v: number | null) => v != null ? `${v > 0 ? "+" : ""}${v.toFixed(1)}%` : "—";
 
           return (
@@ -512,23 +504,7 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                     )}
                   </div>
                 )}
-                {/* Returns vs benchmarks */}
-                {returnsStock && (
-                  <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                    <span className="text-xs font-mono text-gray-600">Benchmarks:</span>
-                    <span className="text-xs font-mono text-gray-600">6M</span>
-                    <span className="text-xs font-mono text-gray-600">1Y</span>
-                    <span className="text-xs font-mono text-gray-500 mx-1">|</span>
-                    <span className="text-xs font-mono text-gray-500">N50:</span>
-                    <span className="text-xs font-mono text-gray-400">{fmt(returnsStock.nifty50_6M)}</span>
-                    <span className="text-xs font-mono text-gray-400">{fmt(returnsStock.nifty50_1Y)}</span>
-                    <span className="text-xs font-mono text-gray-500 mx-1">|</span>
-                    <span className="text-xs font-mono text-gray-500">N500:</span>
-                    <span className="text-xs font-mono text-gray-400">{fmt(returnsStock.nifty500_6M)}</span>
-                    <span className="text-xs font-mono text-gray-400">{fmt(returnsStock.nifty500_1Y)}</span>
-                    <span className="text-xs font-mono text-gray-500 mx-1">|</span>
-                  </div>
-                )}
+
               </div>
 
               <table className="w-full text-sm table-fixed">
