@@ -78,8 +78,14 @@ export default async function Home() {
       summaryDate:    row["Summary Date"] ?? null,
       rsi:            scores["RSI"] ?? null,
       rsiSignal:      scores["RSI Signal"] ?? null,
-      above50DMA:     scores["Above 50 DMA"] ?? false,
-      above200DMA:    scores["Above 200 DMA"] ?? false,
+      dma50Value:     scores["DMA 50 Value"] ?? null,
+      dma200Value:    scores["DMA 200 Value"] ?? null,
+      above50DMA:     scores["DMA 50 Value"] != null && row["Current Price"] != null
+                        ? Number(row["Current Price"]) > Number(scores["DMA 50 Value"])
+                        : false,
+      above200DMA:    scores["DMA 200 Value"] != null && row["Current Price"] != null
+                        ? Number(row["Current Price"]) > Number(scores["DMA 200 Value"])
+                        : false,
       classification: scores["Classification"] ?? null,
       suggestedAction: scores["Suggested Action"] ?? null,
       currentPrice:   row["Current Price"] ?? null,
