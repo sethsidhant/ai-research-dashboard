@@ -20,6 +20,8 @@ type Stock = {
   rsiSignal: string | null;
   above50DMA: boolean;
   above200DMA: boolean;
+  dma50Value: number | null;
+  dma200Value: number | null;
   classification: string | null;
   suggestedAction: string | null;
   currentPrice: number | null;
@@ -277,11 +279,11 @@ function SidePanel({ stock, onClose }: { stock: Stock; onClose: () => void }) {
               </div>
               {/* DMA indicators */}
               <div className="flex items-center gap-3 mt-1.5">
-                <span className={`text-xs font-mono ${stock.above50DMA ? "text-emerald-400" : "text-red-400"}`}>
-                  {stock.above50DMA ? "✓" : "✗"} 50 DMA
+                <span className={`text-xs font-mono ${stock.above50DMA && stock.above200DMA ? "text-green-500" : stock.above50DMA ? "text-green-300" : "text-red-300"}`}>
+                  50 DMA {stock.dma50Value != null ? stock.dma50Value.toLocaleString("en-IN") : stock.above50DMA ? "✓" : "✗"}
                 </span>
-                <span className={`text-xs font-mono ${stock.above200DMA ? "text-emerald-400" : "text-red-400"}`}>
-                  {stock.above200DMA ? "✓" : "✗"} 200 DMA
+                <span className={`text-xs font-mono ${stock.above50DMA && stock.above200DMA ? "text-green-500" : stock.above200DMA ? "text-green-300" : "text-red-300"}`}>
+                  200 DMA {stock.dma200Value != null ? stock.dma200Value.toLocaleString("en-IN") : stock.above200DMA ? "✓" : "✗"}
                 </span>
                 {stock.industry && (
                   <span className="text-xs text-gray-500 font-mono">{stock.industry}</span>
@@ -626,16 +628,28 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                         )}
                       </td>
                       {/* 50 DMA */}
-                      <td className="px-4 py-3 text-center">
-                        <span className={`font-mono text-sm font-bold ${row.above50DMA ? "text-emerald-400" : "text-red-400"}`}>
-                          {row.above50DMA ? "✓" : "✗"}
-                        </span>
+                      <td className="px-4 py-3 text-center font-mono text-sm font-bold">
+                        {row.dma50Value != null ? (
+                          <span className={row.above50DMA && row.above200DMA ? "text-green-500" : row.above50DMA ? "text-green-300" : row.above200DMA ? "text-red-300" : "text-red-600"}>
+                            {row.dma50Value.toLocaleString("en-IN")}
+                          </span>
+                        ) : (
+                          <span className={`font-mono text-sm font-bold ${row.above50DMA ? "text-green-300" : "text-red-300"}`}>
+                            {row.above50DMA ? "✓" : "✗"}
+                          </span>
+                        )}
                       </td>
                       {/* 200 DMA */}
-                      <td className="px-4 py-3 text-center">
-                        <span className={`font-mono text-sm font-bold ${row.above200DMA ? "text-emerald-400" : "text-red-400"}`}>
-                          {row.above200DMA ? "✓" : "✗"}
-                        </span>
+                      <td className="px-4 py-3 text-center font-mono text-sm font-bold">
+                        {row.dma200Value != null ? (
+                          <span className={row.above50DMA && row.above200DMA ? "text-green-500" : row.above200DMA ? "text-green-300" : row.above50DMA ? "text-red-300" : "text-red-600"}>
+                            {row.dma200Value.toLocaleString("en-IN")}
+                          </span>
+                        ) : (
+                          <span className={`font-mono text-sm font-bold ${row.above200DMA ? "text-green-300" : "text-red-300"}`}>
+                            {row.above200DMA ? "✓" : "✗"}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
