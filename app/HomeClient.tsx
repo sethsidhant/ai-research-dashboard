@@ -443,6 +443,25 @@ function stockNameColor(stockPE: number | null, industryPE: number | null): stri
 export default function HomeClient({ data }: { data: Stock[] }) {
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [selectedReturns, setSelectedReturns] = useState<Stock | null>(null);
+  const [now, setNow] = useState<Date>(new Date());
+
+  // Live clock — updates every minute
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatDateTime = (d: Date) =>
+    d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) +
+    "  " +
+    d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+
+  // Last updated = most recent summaryDate across all stocks
+  const lastUpdated = data
+    .map(s => s.summaryDate)
+    .filter(Boolean)
+    .sort()
+    .at(-1) ?? null;
 
   // Group stocks by industry
   const grouped: Record<string, Stock[]> = {};
@@ -461,11 +480,21 @@ export default function HomeClient({ data }: { data: Stock[] }) {
 
   return (
     <>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-white">Valuation Heatmap</h1>
-        <p className="text-sm text-gray-500 mt-1 font-mono">
-          {data.length} stocks · grouped by sector · click stock for screener · 📊 for returns · 🤖 for AI summary
-        </p>
+      <div className="mb-6 flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Valuation Heatmap</h1>
+          <p className="text-sm text-gray-500 mt-1 font-mono">
+            {data.length} stocks · grouped by sector · click stock for screener · 📊 for returns · 🤖 for AI summary
+          </p>
+        </div>
+        <div className="text-right flex flex-col items-end gap-1">
+          <span className="text-sm font-mono font-bold text-gray-300">{formatDateTime(now)}</span>
+          {lastUpdated && (
+            <span className="text-xs font-mono text-gray-600">
+              Last updated: <span className="text-gray-500">{lastUpdated}</span>
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Summary chips */}
