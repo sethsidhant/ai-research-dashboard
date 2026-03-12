@@ -544,24 +544,38 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                   </span>
                   <span className="text-xs font-mono text-gray-600">{stocks.length} stock{stocks.length > 1 ? "s" : ""}</span>
                 </div>
-                {/* Industry PE range */}
+                {/* Industry PE — hover to see high/low companies */}
                 {(peHighStock || peLowStock) && (
-                  <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                  <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-xs font-mono text-gray-600">Industry PE:</span>
                     {peHighStock?.industryPE && (
-                      <span className="text-xs font-mono text-gray-400 font-bold">
-                        {peHighStock.industryPE}x
-                      </span>
-                    )}
-                    {peLowStock?.industryPELow && (
-                      <span className="text-xs font-mono text-emerald-400/80">
-                        · ↓ Low: {peLowStock.industryPELow}
-                      </span>
-                    )}
-                    {peHighStock?.industryPEHigh && (
-                      <span className="text-xs font-mono text-red-400/80">
-                        · ↑ High: {peHighStock.industryPEHigh}
-                      </span>
+                      <div className="relative group cursor-default">
+                        <span className="text-xs font-mono text-gray-400 font-bold underline decoration-dotted decoration-gray-600">
+                          {peHighStock.industryPE}x
+                        </span>
+                        {/* Tooltip */}
+                        <div className="absolute left-0 top-5 z-30 hidden group-hover:block w-56 bg-[#0d1520] border border-[#2e3f54] rounded-lg shadow-xl px-3 py-2 pointer-events-none">
+                          <div className="text-xs font-mono text-gray-500 mb-1.5 uppercase tracking-widest">PE Range</div>
+                          {peLowStock?.industryPELow && (
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-mono text-emerald-400">↓ Low</span>
+                              <span className="text-xs font-mono text-gray-300">{peLowStock.industryPELow}</span>
+                            </div>
+                          )}
+                          {peHighStock?.industryPE && (
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-mono text-gray-500">Median</span>
+                              <span className="text-xs font-mono text-gray-300 font-bold">{peHighStock.industryPE}x</span>
+                            </div>
+                          )}
+                          {peHighStock?.industryPEHigh && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-mono text-red-400">↑ High</span>
+                              <span className="text-xs font-mono text-gray-300">{peHighStock.industryPEHigh}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}
@@ -582,9 +596,10 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                 </colgroup>
                 <thead>
                   <tr className="border-b border-[#1e2a38]/50">
-                    <th colSpan={6} className="px-4 py-1"></th>
-                    <th colSpan={2} className="px-4 py-1 text-center text-xs font-mono text-gray-600 font-medium tracking-widest">Moving Average</th>
+                    <th colSpan={4} className="px-4 py-1"></th>
                     <th className="px-4 py-1"></th>
+                    <th colSpan={2} className="px-4 py-1 text-center text-xs font-mono text-gray-600 font-medium tracking-widest">Moving Average</th>
+                    <th colSpan={2} className="px-4 py-1"></th>
                   </tr>
                   <tr className="border-b border-[#1e2a38]">
                     <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">Stock</th>
@@ -592,9 +607,9 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                     <th className="px-4 py-2 text-right text-xs font-mono text-gray-600 font-medium">52W H / L</th>
                     <th className="px-4 py-2 text-right text-xs font-mono text-gray-600 font-medium">% from High</th>
                     <th className="px-4 py-2 text-right text-xs font-mono text-gray-600 font-medium">Stock PE</th>
-                    <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">RSI %</th>
                     <th className="px-4 py-2 text-center text-xs font-mono text-gray-600 font-medium">50D</th>
                     <th className="px-4 py-2 text-center text-xs font-mono text-gray-600 font-medium">200D</th>
+                    <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">RSI %</th>
                     <th className="px-4 py-2"></th>
                   </tr>
                 </thead>
@@ -646,16 +661,6 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                           </span>
                         ) : <span className="text-gray-600">—</span>}
                       </td>
-                      {/* RSI */}
-                      <td className="px-4 py-3">
-                        {row.rsi !== null ? (
-                          <span className={`font-mono text-sm font-bold ${rsiColor(row.rsi)}`}>
-                            {row.rsi}%
-                          </span>
-                        ) : (
-                          <span className="text-gray-600 font-mono text-xs">—</span>
-                        )}
-                      </td>
                       {/* 50 DMA */}
                       <td className="px-4 py-3 text-center font-mono text-sm font-bold">
                         {row.dma50Value != null ? (
@@ -678,6 +683,16 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                           <span className={`font-mono text-sm font-bold ${row.above200DMA ? "text-green-300" : "text-red-300"}`}>
                             {row.above200DMA ? "✓" : "✗"}
                           </span>
+                        )}
+                      </td>
+                      {/* RSI */}
+                      <td className="px-4 py-3">
+                        {row.rsi !== null ? (
+                          <span className={`font-mono text-sm font-bold ${rsiColor(row.rsi)}`}>
+                            {row.rsi}%
+                          </span>
+                        ) : (
+                          <span className="text-gray-600 font-mono text-xs">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
