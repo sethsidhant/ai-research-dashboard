@@ -426,6 +426,18 @@ function SidePanel({ stock, onClose }: { stock: Stock; onClose: () => void }) {
   );
 }
 
+// Stock name colour based on PE deviation from Industry PE
+function stockNameColor(stockPE: number | null, industryPE: number | null): string {
+  if (stockPE == null || industryPE == null || industryPE === 0) return "text-blue-400";
+  const dev = (stockPE - industryPE) / industryPE * 100;
+  if (dev <= -50) return "text-green-800";        // Dark Green: >50% cheaper
+  if (dev <= -20) return "text-green-500";        // Green: 20-50% cheaper
+  if (dev <    0) return "text-green-300";        // Light Green: 0-20% cheaper
+  if (dev <=  20) return "text-pink-300";         // Light Pink: 0-20% more expensive
+  if (dev <=  50) return "text-red-500";          // Red: 20-50% more expensive
+  return           "text-red-800";                // Dark Red: >50% more expensive
+}
+
 export default function HomeClient({ data }: { data: Stock[] }) {
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [selectedReturns, setSelectedReturns] = useState<Stock | null>(null);
@@ -507,7 +519,7 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                     <span className="text-xs font-mono text-gray-600">Industry PE:</span>
                     {peHighStock?.industryPE && (
                       <span className="text-xs font-mono text-gray-400 font-bold">
-                        Median {peHighStock.industryPE}x
+                        {peHighStock.industryPE}x
                       </span>
                     )}
                     {peLowStock?.industryPELow && (
@@ -538,13 +550,18 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                   <col style={{ width: "10%" }} />
                 </colgroup>
                 <thead>
+                  <tr className="border-b border-[#1e2a38]/50">
+                    <th colSpan={6} className="px-4 py-1"></th>
+                    <th colSpan={2} className="px-4 py-1 text-center text-xs font-mono text-gray-600 font-medium tracking-widest">Moving Average</th>
+                    <th className="px-4 py-1"></th>
+                  </tr>
                   <tr className="border-b border-[#1e2a38]">
                     <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">Stock</th>
                     <th className="px-4 py-2 text-right text-xs font-mono text-gray-600 font-medium">Price</th>
                     <th className="px-4 py-2 text-right text-xs font-mono text-gray-600 font-medium">52W H / L</th>
                     <th className="px-4 py-2 text-right text-xs font-mono text-gray-600 font-medium">% from High</th>
                     <th className="px-4 py-2 text-right text-xs font-mono text-gray-600 font-medium">Stock PE</th>
-                    <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">RSI</th>
+                    <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">RSI %</th>
                     <th className="px-4 py-2 text-center text-xs font-mono text-gray-600 font-medium">50D</th>
                     <th className="px-4 py-2 text-center text-xs font-mono text-gray-600 font-medium">200D</th>
                     <th className="px-4 py-2"></th>
@@ -557,7 +574,7 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                         <a
                           href={`https://www.screener.in/company/${row.ticker}/consolidated/`}
                           target="_blank"
-                          className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                          className={`font-medium transition-colors hover:opacity-80 ${stockNameColor(row.stockPE, row.industryPE)}`}
                         >
                           {row.stock}
                         </a>
@@ -602,7 +619,7 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                       <td className="px-4 py-3">
                         {row.rsi !== null ? (
                           <span className={`font-mono text-sm font-bold ${rsiColor(row.rsi)}`}>
-                            {row.rsi}
+                            {row.rsi}%
                           </span>
                         ) : (
                           <span className="text-gray-600 font-mono text-xs">—</span>
