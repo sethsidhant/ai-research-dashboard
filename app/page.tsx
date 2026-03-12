@@ -1,5 +1,4 @@
 import { google } from "googleapis";
-import path from "path";
 import HomeClient from "./HomeClient";
 
 export const revalidate = 300;
@@ -7,9 +6,11 @@ export const revalidate = 300;
 const SHEET_ID = process.env.GOOGLE_SHEET_ID!;
 
 async function getSheetsClient() {
-  const creds = require(path.join(process.cwd(), "credentials.json"));
   const auth = new google.auth.GoogleAuth({
-    credentials: creds,
+    credentials: {
+      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+    },
     scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
   });
   const client = await auth.getClient();
@@ -44,36 +45,35 @@ export default async function Home() {
     getSheetData("Daily Scores"),
   ]);
 
-  // Build scores lookup by stock name
   const scoresMap: Record<string, any> = {};
   scoreRows.forEach((s) => { scoresMap[s["Stock"]] = s; });
 
   const stocks = coreRows.map((stock) => {
     const scores = scoresMap[stock["Stock"]] || {};
     return {
-      name:             stock["Stock"],
-      ticker:           stock["Ticker"],
-      bseCode:          stock["BSE Code"],
-      industryPE:       stock["Industry PE"],
-      industryPEHigh:   stock["Industry PE High"],
-      industryPELow:    stock["Industry PE Low"],
-      stockPE:          stock["Stock PE"],
-      roe:              stock["ROE %"],
-      roce:             stock["ROCE %"],
-      marketCap:        stock["Market Cap"],
-      industry:         stock["Industry Hierarchy"],
-      headlines:        stock["Latest Headlines"],
-      lastNewsUpdate:   stock["Last News Update"],
-      aiSummary:        stock["AI Summary"],
-      summaryDate:      stock["Summary Date"],
-      peDeviation:      scores["PE Deviation %"],
-      rsi:              scores["RSI"],
-      rsiSignal:        scores["RSI Signal"],
-      above50DMA:       scores["Above 50 DMA"],
-      above200DMA:      scores["Above 200 DMA"],
-      compositeScore:   scores["Composite Score"],
-      classification:   scores["Classification"],
-      suggestedAction:  scores["Suggested Action"],
+      name:            stock["Stock"],
+      ticker:          stock["Ticker"],
+      bseCode:         stock["BSE Code"],
+      industryPE:      stock["Industry PE"],
+      industryPEHigh:  stock["Industry PE High"],
+      industryPELow:   stock["Industry PE Low"],
+      stockPE:         stock["Stock PE"],
+      roe:             stock["ROE %"],
+      roce:            stock["ROCE %"],
+      marketCap:       stock["Market Cap"],
+      industry:        stock["Industry Hierarchy"],
+      headlines:       stock["Latest Headlines"],
+      lastNewsUpdate:  stock["Last News Update"],
+      aiSummary:       stock["AI Summary"],
+      summaryDate:     stock["Summary Date"],
+      peDeviation:     scores["PE Deviation %"],
+      rsi:             scores["RSI"],
+      rsiSignal:       scores["RSI Signal"],
+      above50DMA:      scores["Above 50 DMA"],
+      above200DMA:     scores["Above 200 DMA"],
+      compositeScore:  scores["Composite Score"],
+      classification:  scores["Classification"],
+      suggestedAction: scores["Suggested Action"],
     };
   });
 
