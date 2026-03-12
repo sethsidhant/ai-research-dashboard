@@ -550,7 +550,7 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                     <span className="text-xs font-mono text-gray-600">Industry PE:</span>
                     {peHighStock?.industryPE && (
                       <div className="relative group cursor-default">
-                        <span className="text-xs font-mono text-gray-400 font-bold underline decoration-dotted decoration-gray-600">
+                        <span className="text-xs font-mono text-gray-400 font-bold underline decoration-dotted decoration-gray-600 text-sm">
                           {peHighStock.industryPE}x
                         </span>
                         {/* Tooltip */}
@@ -647,16 +647,10 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                           </span>
                         ) : <span className="text-gray-600">—</span>}
                       </td>
-                      {/* Stock PE — colored by valuation band */}
+                      {/* Stock PE — no color, plain */}
                       <td className="px-4 py-3 text-right font-mono font-bold text-sm">
                         {row.stockPE != null ? (
-                          <span className={
-                            row.band === "cheap"     ? "text-emerald-400" :
-                            row.band === "discount"  ? "text-emerald-300" :
-                            row.band === "fair"      ? "text-gray-300"    :
-                            row.band === "premium"   ? "text-amber-400"   :
-                                                       "text-red-400"
-                          }>
+                          <span className="text-gray-300">
                             {row.stockPE.toFixed(1)}x
                           </span>
                         ) : <span className="text-gray-600">—</span>}
