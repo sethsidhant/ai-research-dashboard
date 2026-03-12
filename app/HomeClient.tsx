@@ -22,6 +22,13 @@ type Stock = {
   above200DMA: boolean;
   classification: string | null;
   suggestedAction: string | null;
+  sectorIndex: string | null;
+  stock6M: number | null;
+  stock1Y: number | null;
+  nifty50_6M: number | null;
+  nifty50_1Y: number | null;
+  nifty500_6M: number | null;
+  nifty500_1Y: number | null;
 };
 
 type FilingItem = {
@@ -135,6 +142,76 @@ function rsiSignalStyle(signal: string | null): string {
   }
 }
 
+function ReturnsModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
+  const fmt = (v: number | null) => v != null ? `${v > 0 ? "+" : ""}${v.toFixed(1)}%` : "—";
+  const cls = (s: number | null, b: number | null) =>
+    s == null ? "text-gray-500" : s >= (b ?? -Infinity) ? "text-emerald-400" : "text-red-400";
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 bg-[#080b0f] border border-[#2e3f54] rounded-xl shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="px-4 py-3 bg-[#0d1520] border-b border-[#1e2a38] flex items-center justify-between">
+          <div>
+            <span className="text-white font-bold text-sm">{stock.stock}</span>
+            <span className="text-gray-500 text-xs font-mono ml-2">Returns</span>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors text-sm">✕</button>
+        </div>
+        {/* Returns table */}
+        <div className="p-4">
+          <table className="w-full text-xs font-mono">
+            <thead>
+              <tr className="border-b border-[#1e2a38]">
+                <th className="pb-2 text-left text-gray-600 font-medium"></th>
+                <th className="pb-2 text-right text-gray-600 font-medium">6M</th>
+                <th className="pb-2 text-right text-gray-600 font-medium">1Y</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-[#1e2a38]">
+                <td className="py-2 text-gray-300 font-bold">{stock.ticker}</td>
+                <td className={`py-2 text-right font-bold ${cls(stock.stock6M, stock.nifty50_6M)}`}>{fmt(stock.stock6M)}</td>
+                <td className={`py-2 text-right font-bold ${cls(stock.stock1Y, stock.nifty50_1Y)}`}>{fmt(stock.stock1Y)}</td>
+              </tr>
+              <tr className="border-b border-[#1e2a38]">
+                <td className="py-2 text-gray-500">NIFTY 50</td>
+                <td className="py-2 text-right text-gray-400">{fmt(stock.nifty50_6M)}</td>
+                <td className="py-2 text-right text-gray-400">{fmt(stock.nifty50_1Y)}</td>
+              </tr>
+              <tr>
+                <td className="py-2 text-gray-500">NIFTY 500</td>
+                <td className="py-2 text-right text-gray-400">{fmt(stock.nifty500_6M)}</td>
+                <td className="py-2 text-right text-gray-400">{fmt(stock.nifty500_1Y)}</td>
+              </tr>
+            </tbody>
+          </table>
+          {/* Beat/lag summary */}
+          <div className="mt-3 pt-3 border-t border-[#1e2a38] flex gap-2 flex-wrap">
+            {stock.stock6M != null && stock.nifty50_6M != null && (
+              <span className={`text-xs font-mono px-2 py-0.5 rounded border ${stock.stock6M >= stock.nifty50_6M ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/20" : "text-red-400 bg-red-400/10 border-red-400/20"}`}>
+                {stock.stock6M >= stock.nifty50_6M ? "↑ Beating N50 (6M)" : "↓ Lagging N50 (6M)"}
+              </span>
+            )}
+            {stock.stock1Y != null && stock.nifty50_1Y != null && (
+              <span className={`text-xs font-mono px-2 py-0.5 rounded border ${stock.stock1Y >= stock.nifty50_1Y ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/20" : "text-red-400 bg-red-400/10 border-red-400/20"}`}>
+                {stock.stock1Y >= stock.nifty50_1Y ? "↑ Beating N50 (1Y)" : "↓ Lagging N50 (1Y)"}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 type Tab = "summary" | "filings";
 
 function SidePanel({ stock, onClose }: { stock: Stock; onClose: () => void }) {
@@ -192,6 +269,44 @@ function SidePanel({ stock, onClose }: { stock: Stock; onClose: () => void }) {
                   <span className="text-xs text-gray-500 font-mono">{stock.industry}</span>
                 )}
               </div>
+              {/* Returns vs benchmarks */}
+              {(stock.stock6M != null || stock.nifty50_6M != null) && (() => {
+                const fmt = (v: number | null) => v != null ? `${v > 0 ? "+" : ""}${v.toFixed(1)}%` : "—";
+                const cls = (s: number | null, b: number | null) =>
+                  s == null ? "text-gray-500" : s >= (b ?? -Infinity) ? "text-emerald-400" : "text-red-400";
+                return (
+                  <div className="mt-2 border border-[#1e2a38] rounded overflow-hidden">
+                    <table className="w-full text-xs font-mono">
+                      <thead>
+                        <tr className="bg-[#0d1520] border-b border-[#1e2a38]">
+                          <th className="px-2 py-1 text-left text-gray-600 font-medium"></th>
+                          <th className="px-2 py-1 text-right text-gray-600 font-medium">6M</th>
+                          <th className="px-2 py-1 text-right text-gray-600 font-medium">1Y</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b border-[#1e2a38]">
+                          <td className="px-2 py-1 text-gray-400 font-bold">{stock.stock}</td>
+                          <td className={`px-2 py-1 text-right font-bold ${cls(stock.stock6M, stock.nifty50_6M)}`}>{fmt(stock.stock6M)}</td>
+                          <td className={`px-2 py-1 text-right font-bold ${cls(stock.stock1Y, stock.nifty50_1Y)}`}>{fmt(stock.stock1Y)}</td>
+                        </tr>
+                        <tr className="border-b border-[#1e2a38]">
+                          <td className="px-2 py-1 text-gray-500">NIFTY 50</td>
+                          <td className="px-2 py-1 text-right text-gray-400">{fmt(stock.nifty50_6M)}</td>
+                          <td className="px-2 py-1 text-right text-gray-400">{fmt(stock.nifty50_1Y)}</td>
+                        </tr>
+                        <tr className="border-b border-[#1e2a38]">
+                          <td className="px-2 py-1 text-gray-500">NIFTY 500</td>
+                          <td className="px-2 py-1 text-right text-gray-400">{fmt(stock.nifty500_6M)}</td>
+                          <td className="px-2 py-1 text-right text-gray-400">{fmt(stock.nifty500_1Y)}</td>
+                        </tr>
+                        <tr>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
             </div>
             <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors text-xl px-2">✕</button>
           </div>
@@ -295,6 +410,7 @@ function SidePanel({ stock, onClose }: { stock: Stock; onClose: () => void }) {
 
 export default function HomeClient({ data }: { data: Stock[] }) {
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
+  const [selectedReturns, setSelectedReturns] = useState<Stock | null>(null);
 
   // Group stocks by industry
   const grouped: Record<string, Stock[]> = {};
@@ -316,7 +432,7 @@ export default function HomeClient({ data }: { data: Stock[] }) {
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight text-white">Valuation Heatmap</h1>
         <p className="text-sm text-gray-500 mt-1 font-mono">
-          {data.length} stocks · grouped by sector · click stock for screener · 🤖 for AI summary
+          {data.length} stocks · grouped by sector · click stock for screener · 📊 for returns · 🤖 for AI summary
         </p>
       </div>
 
@@ -354,6 +470,16 @@ export default function HomeClient({ data }: { data: Stock[] }) {
           const peHighStock = stocks.find(s => s.industryPEHigh);
           const peLowStock  = stocks.find(s => s.industryPELow);
 
+          // Get returns from first stock that has them (all stocks in a sector share NIFTY50 + sector index returns)
+          const returnsStock = stocks.find(s => s.nifty50_6M != null);
+
+          // Helper: colour-code a return % vs benchmark
+          const retColor = (stock: number | null, bench: number | null) => {
+            if (stock == null || bench == null) return "text-gray-500";
+            return stock >= bench ? "text-emerald-400" : "text-red-400";
+          };
+          const fmt = (v: number | null) => v != null ? `${v > 0 ? "+" : ""}${v.toFixed(1)}%` : "—";
+
           return (
             <div key={industry} className="rounded-lg border border-[#1e2a38] overflow-hidden">
 
@@ -386,17 +512,34 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                     )}
                   </div>
                 )}
+                {/* Returns vs benchmarks */}
+                {returnsStock && (
+                  <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                    <span className="text-xs font-mono text-gray-600">Benchmarks:</span>
+                    <span className="text-xs font-mono text-gray-600">6M</span>
+                    <span className="text-xs font-mono text-gray-600">1Y</span>
+                    <span className="text-xs font-mono text-gray-500 mx-1">|</span>
+                    <span className="text-xs font-mono text-gray-500">N50:</span>
+                    <span className="text-xs font-mono text-gray-400">{fmt(returnsStock.nifty50_6M)}</span>
+                    <span className="text-xs font-mono text-gray-400">{fmt(returnsStock.nifty50_1Y)}</span>
+                    <span className="text-xs font-mono text-gray-500 mx-1">|</span>
+                    <span className="text-xs font-mono text-gray-500">N500:</span>
+                    <span className="text-xs font-mono text-gray-400">{fmt(returnsStock.nifty500_6M)}</span>
+                    <span className="text-xs font-mono text-gray-400">{fmt(returnsStock.nifty500_1Y)}</span>
+                    <span className="text-xs font-mono text-gray-500 mx-1">|</span>
+                  </div>
+                )}
               </div>
 
               <table className="w-full text-sm table-fixed">
                 <colgroup>
-                  <col style={{ width: "28%" }} />
-                  <col style={{ width: "15%" }} />
-                  <col style={{ width: "18%" }} />
+                  <col style={{ width: "26%" }} />
+                  <col style={{ width: "14%" }} />
+                  <col style={{ width: "17%" }} />
                   <col style={{ width: "10%" }} />
                   <col style={{ width: "10%" }} />
                   <col style={{ width: "10%" }} />
-                  <col style={{ width: "9%" }} />
+                  <col style={{ width: "13%" }} />
                 </colgroup>
                 <thead>
                   <tr className="border-b border-[#1e2a38]">
@@ -451,12 +594,23 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => setSelectedStock(row)}
-                          className="px-2 py-1 rounded text-xs font-mono bg-[#1e2a38] text-gray-400 hover:bg-blue-500/20 hover:text-blue-400 border border-[#2e3f54] hover:border-blue-400/30 transition-all"
-                        >
-                          {row.aiSummary ? "🤖" : "📋"}
-                        </button>
+                        <div className="flex items-center gap-1">
+                          {(row.stock6M != null || row.nifty50_6M != null) && (
+                            <button
+                              onClick={() => setSelectedReturns(row)}
+                              className="px-2 py-1 rounded text-xs font-mono bg-[#1e2a38] text-gray-400 hover:bg-emerald-500/20 hover:text-emerald-400 border border-[#2e3f54] hover:border-emerald-400/30 transition-all"
+                              title="Returns vs benchmarks"
+                            >
+                              📊
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setSelectedStock(row)}
+                            className="px-2 py-1 rounded text-xs font-mono bg-[#1e2a38] text-gray-400 hover:bg-blue-500/20 hover:text-blue-400 border border-[#2e3f54] hover:border-blue-400/30 transition-all"
+                          >
+                            {row.aiSummary ? "🤖" : "📋"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -469,6 +623,9 @@ export default function HomeClient({ data }: { data: Stock[] }) {
 
       {selectedStock && (
         <SidePanel stock={selectedStock} onClose={() => setSelectedStock(null)} />
+      )}
+      {selectedReturns && (
+        <ReturnsModal stock={selectedReturns} onClose={() => setSelectedReturns(null)} />
       )}
     </>
   );

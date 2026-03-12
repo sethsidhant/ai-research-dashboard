@@ -82,6 +82,13 @@ export default async function Home() {
       above200DMA:    scores["Above 200 DMA"] ?? false,
       classification: scores["Classification"] ?? null,
       suggestedAction: scores["Suggested Action"] ?? null,
+      sectorIndex:    null,   // removed
+      stock6M:        scores["Stock 6M"] ?? null,
+      stock1Y:        scores["Stock 1Y"] ?? null,
+      nifty50_6M:     scores["Nifty50 6M"] ?? null,
+      nifty50_1Y:     scores["Nifty50 1Y"] ?? null,
+      nifty500_6M:    scores["Nifty500 6M"] ?? null,
+      nifty500_1Y:    scores["Nifty500 1Y"] ?? null,
     };
   });
 
