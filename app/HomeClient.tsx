@@ -22,6 +22,11 @@ type Stock = {
   above200DMA: boolean;
   classification: string | null;
   suggestedAction: string | null;
+  currentPrice: number | null;
+  high52W: number | null;
+  low52W: number | null;
+  pctFrom52WHigh: number | null;
+  stockPE: number | null;
   sectorIndex: string | null;
   stock6M: number | null;
   stock1Y: number | null;
@@ -243,17 +248,30 @@ function SidePanel({ stock, onClose }: { stock: Stock; onClose: () => void }) {
                 )}
               </div>
               <div className="flex items-center gap-3 mt-1 flex-wrap">
-                <span className={`text-sm font-mono font-bold ${stock.peDeviation < 0 ? "text-emerald-400" : "text-red-400"}`}>
-                  {stock.peDeviation > 0 ? "+" : ""}{stock.peDeviation.toFixed(1)}% PE dev
-                </span>
-                {stock.rsi !== null && (
-                  <span className={`text-sm font-mono font-bold ${rsiColor(stock.rsi)}`}>
-                    RSI {stock.rsi}
+                {stock.currentPrice != null && (
+                  <span className="text-sm font-mono font-bold text-white">
+                    ₹{stock.currentPrice.toLocaleString("en-IN")}
                   </span>
                 )}
-                {stock.rsiSignal && (
-                  <span className={`px-2 py-0.5 rounded text-xs font-mono border ${rsiSignalStyle(stock.rsiSignal)}`}>
-                    {stock.rsiSignal}
+                {stock.pctFrom52WHigh != null && (
+                  <span className={`text-sm font-mono font-bold ${stock.pctFrom52WHigh >= -10 ? "text-emerald-400" : stock.pctFrom52WHigh >= -25 ? "text-amber-400" : "text-red-400"}`}>
+                    {stock.pctFrom52WHigh.toFixed(1)}% from 52W high
+                  </span>
+                )}
+                {stock.stockPE != null && (
+                  <span className={`text-sm font-mono font-bold ${
+                    stock.band === "cheap"    ? "text-emerald-400" :
+                    stock.band === "discount" ? "text-emerald-300" :
+                    stock.band === "fair"     ? "text-gray-300"    :
+                    stock.band === "premium"  ? "text-amber-400"   :
+                                               "text-red-400"
+                  }`}>
+                    PE {stock.stockPE.toFixed(1)}x
+                  </span>
+                )}
+                {stock.high52W != null && (
+                  <span className="text-xs font-mono text-gray-500">
+                    52W: <span className="text-emerald-400/70">{stock.high52W.toLocaleString("en-IN")}</span> / <span className="text-red-400/70">{stock.low52W?.toLocaleString("en-IN") ?? "—"}</span>
                   </span>
                 )}
               </div>
@@ -509,19 +527,23 @@ export default function HomeClient({ data }: { data: Stock[] }) {
 
               <table className="w-full text-sm table-fixed">
                 <colgroup>
-                  <col style={{ width: "26%" }} />
+                  <col style={{ width: "20%" }} />
+                  <col style={{ width: "10%" }} />
                   <col style={{ width: "14%" }} />
-                  <col style={{ width: "17%" }} />
+                  <col style={{ width: "11%" }} />
                   <col style={{ width: "10%" }} />
+                  <col style={{ width: "9%" }} />
+                  <col style={{ width: "8%" }} />
+                  <col style={{ width: "8%" }} />
                   <col style={{ width: "10%" }} />
-                  <col style={{ width: "10%" }} />
-                  <col style={{ width: "13%" }} />
                 </colgroup>
                 <thead>
                   <tr className="border-b border-[#1e2a38]">
                     <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">Stock</th>
-                    <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">PE Dev</th>
-                    <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">Valuation</th>
+                    <th className="px-4 py-2 text-right text-xs font-mono text-gray-600 font-medium">Price</th>
+                    <th className="px-4 py-2 text-right text-xs font-mono text-gray-600 font-medium">52W H / L</th>
+                    <th className="px-4 py-2 text-right text-xs font-mono text-gray-600 font-medium">% from High</th>
+                    <th className="px-4 py-2 text-right text-xs font-mono text-gray-600 font-medium">Stock PE</th>
                     <th className="px-4 py-2 text-left text-xs font-mono text-gray-600 font-medium">RSI</th>
                     <th className="px-4 py-2 text-center text-xs font-mono text-gray-600 font-medium">50D</th>
                     <th className="px-4 py-2 text-center text-xs font-mono text-gray-600 font-medium">200D</th>
@@ -540,16 +562,43 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                           {row.stock}
                         </a>
                       </td>
-                      <td className="px-4 py-3 font-mono font-bold">
-                        <span className={row.peDeviation < 0 ? "text-emerald-400" : "text-red-400"}>
-                          {row.peDeviation > 0 ? "+" : ""}{row.peDeviation.toFixed(1)}%
-                        </span>
+                      {/* Current Price */}
+                      <td className="px-4 py-3 text-right font-mono text-sm text-gray-200">
+                        {row.currentPrice != null ? `₹${row.currentPrice.toLocaleString("en-IN")}` : <span className="text-gray-600">—</span>}
                       </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded text-xs font-mono ${bandStyles[row.band]}`}>
-                          {row.valuation}
-                        </span>
+                      {/* 52W High / Low */}
+                      <td className="px-4 py-3 text-right font-mono text-xs">
+                        {row.high52W != null ? (
+                          <span>
+                            <span className="text-emerald-400">{row.high52W.toLocaleString("en-IN")}</span>
+                            <span className="text-gray-600"> / </span>
+                            <span className="text-red-400">{row.low52W?.toLocaleString("en-IN") ?? "—"}</span>
+                          </span>
+                        ) : <span className="text-gray-600">—</span>}
                       </td>
+                      {/* % from 52W High */}
+                      <td className="px-4 py-3 text-right font-mono font-bold text-sm">
+                        {row.pctFrom52WHigh != null ? (
+                          <span className={row.pctFrom52WHigh >= -10 ? "text-emerald-400" : row.pctFrom52WHigh >= -25 ? "text-amber-400" : "text-red-400"}>
+                            {row.pctFrom52WHigh.toFixed(1)}%
+                          </span>
+                        ) : <span className="text-gray-600">—</span>}
+                      </td>
+                      {/* Stock PE — colored by valuation band */}
+                      <td className="px-4 py-3 text-right font-mono font-bold text-sm">
+                        {row.stockPE != null ? (
+                          <span className={
+                            row.band === "cheap"     ? "text-emerald-400" :
+                            row.band === "discount"  ? "text-emerald-300" :
+                            row.band === "fair"      ? "text-gray-300"    :
+                            row.band === "premium"   ? "text-amber-400"   :
+                                                       "text-red-400"
+                          }>
+                            {row.stockPE.toFixed(1)}x
+                          </span>
+                        ) : <span className="text-gray-600">—</span>}
+                      </td>
+                      {/* RSI */}
                       <td className="px-4 py-3">
                         {row.rsi !== null ? (
                           <span className={`font-mono text-sm font-bold ${rsiColor(row.rsi)}`}>
@@ -559,11 +608,13 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                           <span className="text-gray-600 font-mono text-xs">—</span>
                         )}
                       </td>
+                      {/* 50 DMA */}
                       <td className="px-4 py-3 text-center">
                         <span className={`font-mono text-sm font-bold ${row.above50DMA ? "text-emerald-400" : "text-red-400"}`}>
                           {row.above50DMA ? "✓" : "✗"}
                         </span>
                       </td>
+                      {/* 200 DMA */}
                       <td className="px-4 py-3 text-center">
                         <span className={`font-mono text-sm font-bold ${row.above200DMA ? "text-emerald-400" : "text-red-400"}`}>
                           {row.above200DMA ? "✓" : "✗"}

@@ -82,6 +82,11 @@ export default async function Home() {
       above200DMA:    scores["Above 200 DMA"] ?? false,
       classification: scores["Classification"] ?? null,
       suggestedAction: scores["Suggested Action"] ?? null,
+      currentPrice:   row["Current Price"] ?? null,
+      high52W:        row["High 52W"] ?? null,
+      low52W:         row["Low 52W"] ?? null,
+      pctFrom52WHigh: row["Pct From 52W High"] ?? null,
+      stockPE:        row["Stock PE"] ?? null,
       sectorIndex:    null,   // removed
       stock6M:        scores["Stock 6M"] ?? null,
       stock1Y:        scores["Stock 1Y"] ?? null,
