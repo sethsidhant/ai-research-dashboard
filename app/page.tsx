@@ -39,6 +39,15 @@ async function getSheetData(sheetName: string) {
   });
 }
 
+function getValuationBand(peDeviation: number | null, classification: string | null): { valuation: string; band: string } {
+  if (peDeviation === null) return { valuation: classification || "N/A", band: "fair" };
+  if (peDeviation < -30)  return { valuation: "Cheap",     band: "cheap" };
+  if (peDeviation < -10)  return { valuation: "Discount",  band: "discount" };
+  if (peDeviation <= 10)  return { valuation: "Fair",      band: "fair" };
+  if (peDeviation <= 30)  return { valuation: "Premium",   band: "premium" };
+  return                         { valuation: "Expensive", band: "expensive" };
+}
+
 export default async function Home() {
   const [coreRows, scoreRows] = await Promise.all([
     getSheetData("Core Universe"),
@@ -48,32 +57,31 @@ export default async function Home() {
   const scoresMap: Record<string, any> = {};
   scoreRows.forEach((s) => { scoresMap[s["Stock"]] = s; });
 
-  const stocks = coreRows.map((stock) => {
-    const scores = scoresMap[stock["Stock"]] || {};
+  const stocks = coreRows.map((row) => {
+    const scores = scoresMap[row["Stock"]] || {};
+    const peDeviation = scores["PE Deviation %"] ?? null;
+    const { valuation, band } = getValuationBand(peDeviation, scores["Classification"]);
+
     return {
-      name:            stock["Stock"],
-      ticker:          stock["Ticker"],
-      bseCode:         stock["BSE Code"],
-      industryPE:      stock["Industry PE"],
-      industryPEHigh:  stock["Industry PE High"],
-      industryPELow:   stock["Industry PE Low"],
-      stockPE:         stock["Stock PE"],
-      roe:             stock["ROE %"],
-      roce:            stock["ROCE %"],
-      marketCap:       stock["Market Cap"],
-      industry:        stock["Industry Hierarchy"],
-      headlines:       stock["Latest Headlines"],
-      lastNewsUpdate:  stock["Last News Update"],
-      aiSummary:       stock["AI Summary"],
-      summaryDate:     stock["Summary Date"],
-      peDeviation:     scores["PE Deviation %"],
-      rsi:             scores["RSI"],
-      rsiSignal:       scores["RSI Signal"],
-      above50DMA:      scores["Above 50 DMA"],
-      above200DMA:     scores["Above 200 DMA"],
-      compositeScore:  scores["Composite Score"],
-      classification:  scores["Classification"],
-      suggestedAction: scores["Suggested Action"],
+      stock:          row["Stock"],
+      ticker:         row["Ticker"],
+      peDeviation:    peDeviation,
+      valuation,
+      band,
+      industry:       row["Industry Hierarchy"] ?? null,
+      industryPE:     row["Industry PE"] ?? null,
+      industryPEHigh: row["Industry PE High"] ?? null,
+      industryPELow:  row["Industry PE Low"] ?? null,
+      headlines:      row["Latest Headlines"] ?? null,
+      lastUpdate:     row["Last News Update"] ?? null,
+      aiSummary:      row["AI Summary"] ?? null,
+      summaryDate:    row["Summary Date"] ?? null,
+      rsi:            scores["RSI"] ?? null,
+      rsiSignal:      scores["RSI Signal"] ?? null,
+      above50DMA:     scores["Above 50 DMA"] ?? false,
+      above200DMA:    scores["Above 200 DMA"] ?? false,
+      classification: scores["Classification"] ?? null,
+      suggestedAction: scores["Suggested Action"] ?? null,
     };
   });
 
