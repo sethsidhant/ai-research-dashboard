@@ -254,7 +254,7 @@ function SidePanel({ stock, onClose }: { stock: Stock; onClose: () => void }) {
                   </span>
                 )}
                 {stock.pctFrom52WHigh != null && (
-                  <span className={`text-sm font-mono font-bold ${stock.pctFrom52WHigh >= -10 ? "text-emerald-400" : stock.pctFrom52WHigh >= -25 ? "text-amber-400" : "text-red-400"}`}>
+                  <span className={`text-sm font-mono font-bold ${stock.pctFrom52WHigh <= -20 ? "text-emerald-400" : stock.pctFrom52WHigh <= -10 ? "text-amber-400" : "text-red-400"}`}>
                     {stock.pctFrom52WHigh.toFixed(1)}% from 52W high
                   </span>
                 )}
@@ -579,7 +579,7 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                       {/* % from 52W High */}
                       <td className="px-4 py-3 text-right font-mono font-bold text-sm">
                         {row.pctFrom52WHigh != null ? (
-                          <span className={row.pctFrom52WHigh >= -10 ? "text-emerald-400" : row.pctFrom52WHigh >= -25 ? "text-amber-400" : "text-red-400"}>
+                          <span className={row.pctFrom52WHigh <= -20 ? "text-emerald-400" : row.pctFrom52WHigh <= -10 ? "text-amber-400" : "text-red-400"}>
                             {row.pctFrom52WHigh.toFixed(1)}%
                           </span>
                         ) : <span className="text-gray-600">—</span>}
