@@ -175,7 +175,6 @@ function rsiSignalStyle(signal: string | null): string {
     default:              return "text-gray-500 bg-gray-50 border-gray-200";
   }
 }
-}
 
 function ReturnsModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
   const fmt = (v: number | null) => v != null ? `${v > 0 ? "+" : ""}${v.toFixed(1)}%` : "—";
