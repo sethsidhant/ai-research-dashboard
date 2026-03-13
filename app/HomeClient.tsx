@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 type Stock = {
   stock: string;
@@ -446,7 +446,8 @@ export default function HomeClient({ data }: { data: Stock[] }) {
   const [now, setNow] = useState<Date>(new Date());
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
   const [liveStatus, setLiveStatus] = useState<"live" | "closed" | "error">("closed");
-  const [prevPrices, setPrevPrices] = useState<Record<string, number>>({});
+  const [flashMap, setFlashMap] = useState<Record<string, "up" | "down">>({});
+  const prevPricesRef = useRef<Record<string, number>>({});
 
   // Live clock — updates every minute
   useEffect(() => {
@@ -464,9 +465,26 @@ export default function HomeClient({ data }: { data: Stock[] }) {
         const res = await fetch(`/api/live-prices?tickers=${encodeURIComponent(tickers)}`);
         const json = await res.json();
         if (json.live && json.prices) {
-          setPrevPrices(prev => ({ ...prev, ...livePrices }));
-          setLivePrices(json.prices);
+          const newPrices: Record<string, number> = json.prices;
+          const prev = prevPricesRef.current;
+
+          // Compute which prices moved
+          const newFlash: Record<string, "up" | "down"> = {};
+          for (const [ticker, price] of Object.entries(newPrices)) {
+            if (prev[ticker] != null && price !== prev[ticker]) {
+              newFlash[ticker] = price > prev[ticker] ? "up" : "down";
+            }
+          }
+
+          prevPricesRef.current = newPrices;
+          setLivePrices(newPrices);
           setLiveStatus("live");
+
+          if (Object.keys(newFlash).length > 0) {
+            setFlashMap(newFlash);
+            // Clear flash after 800ms
+            setTimeout(() => setFlashMap({}), 800);
+          }
         } else {
           setLiveStatus("closed");
         }
@@ -749,13 +767,15 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                       <td className="px-4 py-3 text-right font-mono text-sm">
                         {(() => {
                           const live = livePrices[row.ticker];
-                          const prev = prevPrices[row.ticker];
                           const price = live ?? row.currentPrice;
-                          const isLive = !!live;
-                          const up   = isLive && prev != null && live > prev;
-                          const down = isLive && prev != null && live < prev;
+                          const flash = flashMap[row.ticker];
                           return price != null ? (
-                            <span className={`font-bold transition-colors duration-500 ${up ? "text-emerald-400" : down ? "text-red-400" : isLive ? "text-white" : "text-gray-200"}`}>
+                            <span className={`font-bold transition-colors duration-700 ${
+                              flash === "up"   ? "text-emerald-400" :
+                              flash === "down" ? "text-red-400" :
+                              live != null     ? "text-white" :
+                                                 "text-gray-200"
+                            }`}>
                               ₹{price.toLocaleString("en-IN")}
                             </span>
                           ) : <span className="text-gray-600">—</span>;
