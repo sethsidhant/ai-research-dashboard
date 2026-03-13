@@ -81,39 +81,35 @@ function parseHeadlines(raw: string): Section[] {
 }
 
 // Splits text and bolds: **markdown**, numbers with units (%, x, cr, lakh, yrs, years, bps), and standalone numbers
-function renderInline(text: string) {
-  // First pass: split on **markdown** bold
+function renderInline(text: string): JSX.Element[] {
+  const numRegex = /((?:₹\s?)?\d[\d,]*(?:\.\d+)?(?:\s?(?:%|x|X|cr|Cr|lakh|Lakh|bps|BPS|years?|yrs?|quarters?|qtr|months?))?(?:\s?(?:CAGR|YoY|QoQ|TTM))?|\b(?:P\/E|P\/B|EV\/EBITDA|ROE|ROCE|EPS|PAT|EBITDA|Revenue|Sales|Debt|D\/E)\s+\d[\d,]*(?:\.\d+)?)/g;
+
+  // Split on **markdown** bold first
   const mdParts = text.split(/(\*\*[^*]+\*\*)/g);
+  const result: JSX.Element[] = [];
+  let keyIdx = 0;
 
-  return mdParts.flatMap((part, i) => {
-    // Already a markdown bold
+  for (const part of mdParts) {
     if (part.startsWith("**") && part.endsWith("**")) {
-      return [<strong key={`md-${i}`} className="font-bold text-gray-900">{part.slice(2, -2)}</strong>];
+      result.push(<strong key={keyIdx++} className="font-bold text-gray-900">{part.slice(2, -2)}</strong>);
+      continue;
     }
-
-    // Second pass: auto-bold numeric patterns in plain text
-    // Matches: 3.2x | 45% | ₹1,200 | 3-year | 12 years | 1.5 cr | 200 bps | P/E 24 | 0.8 | 1,234
-    const numRegex = /((?:₹\s?)?\d[\d,]*(?:\.\d+)?(?:\s?(?:%|x|X|cr|Cr|lakh|Lakh|bps|BPS|years?|yrs?|quarters?|qtr|months?))?(?:\s?(?:CAGR|YoY|QoQ|TTM))?|\b(?:P\/E|P\/B|EV\/EBITDA|ROE|ROCE|EPS|PAT|EBITDA|Revenue|Sales|Debt|D\/E)\s+\d[\d,]*(?:\.\d+)?)/g;
-
-    const segments: React.ReactNode[] = [];
+    // Auto-bold numbers in plain text segments
     let last = 0;
-    let match;
+    let match: RegExpExecArray | null;
     numRegex.lastIndex = 0;
-
     while ((match = numRegex.exec(part)) !== null) {
       if (match.index > last) {
-        segments.push(<span key={`t-${i}-${last}`}>{part.slice(last, match.index)}</span>);
+        result.push(<span key={keyIdx++}>{part.slice(last, match.index)}</span>);
       }
-      segments.push(
-        <strong key={`n-${i}-${match.index}`} className="font-bold text-gray-900">{match[0]}</strong>
-      );
+      result.push(<strong key={keyIdx++} className="font-bold text-gray-900">{match[0]}</strong>);
       last = match.index + match[0].length;
     }
     if (last < part.length) {
-      segments.push(<span key={`t-${i}-end`}>{part.slice(last)}</span>);
+      result.push(<span key={keyIdx++}>{part.slice(last)}</span>);
     }
-    return segments;
-  });
+  }
+  return result;
 }
 
 function AISummary({ text }: { text: string }) {
