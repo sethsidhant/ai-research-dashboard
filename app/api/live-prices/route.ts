@@ -1,44 +1,34 @@
 import { NextResponse } from "next/server";
-import { KiteConnect } from "kiteconnect";
 
-// Cache live prices for 15 seconds to avoid hammering Kite on multiple users
+// Cache live prices for 15 seconds
 let cache: { prices: Record<string, number>; ts: number } | null = null;
-const CACHE_TTL = 15_000; // 15 seconds
+const CACHE_TTL = 15_000;
 
 function isMarketOpen(): boolean {
   const now = new Date();
-  // Convert to IST (UTC+5:30)
   const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
-  const day = ist.getUTCDay(); // 0=Sun, 6=Sat
+  const day = ist.getUTCDay();
   if (day === 0 || day === 6) return false;
-
-  const hh = ist.getUTCHours();
-  const mm = ist.getUTCMinutes();
-  const mins = hh * 60 + mm;
-
-  // 9:15 AM – 3:30 PM IST
-  return mins >= 555 && mins <= 930;
+  const mins = ist.getUTCHours() * 60 + ist.getUTCMinutes();
+  return mins >= 555 && mins <= 930; // 9:15 AM – 3:30 PM IST
 }
 
 export async function GET(request: Request) {
-  // Only serve live data during market hours
   if (!isMarketOpen()) {
     return NextResponse.json({ live: false, prices: {} });
   }
 
-  // Return cached data if fresh
   if (cache && Date.now() - cache.ts < CACHE_TTL) {
     return NextResponse.json({ live: true, prices: cache.prices, cached: true });
   }
 
-  const apiKey     = process.env.KITE_API_KEY!;
+  const apiKey      = process.env.KITE_API_KEY!;
   const accessToken = process.env.KITE_ACCESS_TOKEN!;
 
   if (!apiKey || !accessToken) {
     return NextResponse.json({ live: false, prices: {}, error: "Kite credentials not configured" });
   }
 
-  // Read tickers from query param — dashboard sends all tickers it needs
   const { searchParams } = new URL(request.url);
   const tickersParam = searchParams.get("tickers") ?? "";
   const tickers = tickersParam.split(",").map(t => t.trim()).filter(Boolean);
@@ -48,16 +38,26 @@ export async function GET(request: Request) {
   }
 
   try {
-    const kc = new KiteConnect({ api_key: apiKey });
-    kc.setAccessToken(accessToken);
+    // Build query string: i=NSE:TATAPOWER&i=NSE:HAL&...
+    const query = tickers.map(t => `i=NSE%3A${encodeURIComponent(t)}`).join("&");
+    const url = `https://api.kite.trade/quote?${query}`;
 
-    // Format as NSE:TICKER
-    const instruments = tickers.map(t => `NSE:${t}`);
-    const quotes = await kc.getQuote(instruments);
+    const res = await fetch(url, {
+      headers: {
+        "X-Kite-Version": "3",
+        "Authorization": `token ${apiKey}:${accessToken}`,
+      },
+      next: { revalidate: 0 },
+    });
 
+    if (!res.ok) {
+      throw new Error(`Kite API error: ${res.status}`);
+    }
+
+    const json = await res.json();
     const prices: Record<string, number> = {};
-    for (const [key, data] of Object.entries(quotes)) {
-      // key = "NSE:TATAPOWER", extract ticker
+
+    for (const [key, data] of Object.entries(json.data ?? {})) {
       const ticker = key.replace("NSE:", "");
       prices[ticker] = (data as any).last_price;
     }
@@ -67,7 +67,6 @@ export async function GET(request: Request) {
 
   } catch (err: any) {
     console.error("Live price fetch error:", err?.message);
-    // Return stale cache if available rather than failing
     if (cache) {
       return NextResponse.json({ live: true, prices: cache.prices, stale: true });
     }
