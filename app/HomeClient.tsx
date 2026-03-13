@@ -494,7 +494,7 @@ export default function HomeClient({ data }: { data: Stock[] }) {
     };
 
     fetchPrices();
-    const interval = setInterval(fetchPrices, 30_000);
+    const interval = setInterval(fetchPrices, 15_000);
     return () => clearInterval(interval);
   }, [data]);
 
