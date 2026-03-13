@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 type Stock = {
   stock: string;
@@ -81,12 +81,11 @@ function parseHeadlines(raw: string): Section[] {
 }
 
 // Splits text and bolds: **markdown**, numbers with units (%, x, cr, lakh, yrs, years, bps), and standalone numbers
-function renderInline(text: string): JSX.Element[] {
+function renderInline(text: string): React.ReactElement[] {
   const numRegex = /((?:₹\s?)?\d[\d,]*(?:\.\d+)?(?:\s?(?:%|x|X|cr|Cr|lakh|Lakh|bps|BPS|years?|yrs?|quarters?|qtr|months?))?(?:\s?(?:CAGR|YoY|QoQ|TTM))?|\b(?:P\/E|P\/B|EV\/EBITDA|ROE|ROCE|EPS|PAT|EBITDA|Revenue|Sales|Debt|D\/E)\s+\d[\d,]*(?:\.\d+)?)/g;
 
-  // Split on **markdown** bold first
   const mdParts = text.split(/(\*\*[^*]+\*\*)/g);
-  const result: JSX.Element[] = [];
+  const result: React.ReactElement[] = [];
   let keyIdx = 0;
 
   for (const part of mdParts) {
@@ -94,7 +93,6 @@ function renderInline(text: string): JSX.Element[] {
       result.push(<strong key={keyIdx++} className="font-bold text-gray-900">{part.slice(2, -2)}</strong>);
       continue;
     }
-    // Auto-bold numbers in plain text segments
     let last = 0;
     let match: RegExpExecArray | null;
     numRegex.lastIndex = 0;
