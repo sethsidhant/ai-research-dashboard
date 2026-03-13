@@ -103,5 +103,9 @@ export default async function Home() {
     };
   });
 
-  return <HomeClient data={stocks} />;
+  return (
+    <div className="min-h-screen bg-white text-gray-900 px-4 py-6 md:px-8">
+      <HomeClient data={stocks} />
+    </div>
+  );
 }

@@ -665,7 +665,7 @@ export default function HomeClient({ data }: { data: Stock[] }) {
               </div>
 
               {/* ── MOBILE CARD VIEW (< md) ───────────────────────────── */}
-              <div className="md:hidden divide-y divide-[#1e2a38]">
+              <div className="md:hidden divide-y divide-gray-200">
                 {stocks.map((row, i) => (
                   <div key={i} className="px-4 py-3 hover:bg-gray-50 transition-colors">
                     {/* Row 1: Stock name + price + buttons */}
@@ -774,7 +774,7 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                 </thead>
                 <tbody>
                   {stocks.map((row, i) => (
-                    <tr key={i} className={`border-b border-gray-200 last:border-0 hover:bg-gray-50 transition-colors ${selectedStock?.stock === row.stock ? "bg-gray-50" : ""}`}>
+                    <tr key={i} className={`border-b border-gray-200 last:border-0 transition-colors ${selectedStock?.stock === row.stock ? "bg-blue-50" : "bg-white hover:bg-gray-50"}`}>
                       <td className="px-4 py-3">
                         <a
                           href={`https://www.screener.in/company/${row.ticker}/consolidated/`}
