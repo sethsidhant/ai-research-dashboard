@@ -163,7 +163,7 @@ function ReturnsModal({ stock, onClose }: { stock: Stock; onClose: () => void })
   return (
     <>
       <div className="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 bg-[#080b0f] border border-[#2e3f54] rounded-xl shadow-2xl overflow-hidden">
+      <div className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] md:w-72 bg-[#080b0f] border border-[#2e3f54] rounded-xl shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="px-4 py-3 bg-[#0d1520] border-b border-[#1e2a38] flex items-center justify-between">
           <div>
@@ -234,7 +234,7 @@ function SidePanel({ stock, onClose }: { stock: Stock; onClose: () => void }) {
   return (
     <>
       <div className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed right-0 top-0 h-full w-[500px] bg-[#080b0f] border-l border-[#1e2a38] z-50 flex flex-col shadow-2xl">
+      <div className="fixed right-0 top-0 h-full w-full md:w-[500px] bg-[#080b0f] border-l border-[#1e2a38] z-50 flex flex-col shadow-2xl">
         <div className="px-5 py-4 border-b border-[#1e2a38] bg-[#0d1520]">
           <div className="flex items-start justify-between">
             <div>
@@ -444,12 +444,41 @@ export default function HomeClient({ data }: { data: Stock[] }) {
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [selectedReturns, setSelectedReturns] = useState<Stock | null>(null);
   const [now, setNow] = useState<Date>(new Date());
+  const [livePrices, setLivePrices] = useState<Record<string, number>>({});
+  const [liveStatus, setLiveStatus] = useState<"live" | "closed" | "error">("closed");
+  const [prevPrices, setPrevPrices] = useState<Record<string, number>>({});
 
   // Live clock — updates every minute
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // Live price polling — every 30 seconds during market hours
+  useEffect(() => {
+    const tickers = data.map(s => s.ticker).filter(Boolean).join(",");
+    if (!tickers) return;
+
+    const fetchPrices = async () => {
+      try {
+        const res = await fetch(`/api/live-prices?tickers=${encodeURIComponent(tickers)}`);
+        const json = await res.json();
+        if (json.live && json.prices) {
+          setPrevPrices(prev => ({ ...prev, ...livePrices }));
+          setLivePrices(json.prices);
+          setLiveStatus("live");
+        } else {
+          setLiveStatus("closed");
+        }
+      } catch {
+        setLiveStatus("error");
+      }
+    };
+
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 30_000);
+    return () => clearInterval(interval);
+  }, [data]);
 
   const formatDateTime = (d: Date) =>
     d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) +
@@ -488,7 +517,21 @@ export default function HomeClient({ data }: { data: Stock[] }) {
           </p>
         </div>
         <div className="text-right flex flex-col items-end gap-1">
-          <span className="text-sm font-mono font-bold text-gray-300">{formatDateTime(now)}</span>
+          <div className="flex items-center gap-2">
+            {liveStatus === "live" && (
+              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block"></span>
+                <span className="text-xs font-mono text-emerald-400 font-bold">LIVE</span>
+              </span>
+            )}
+            {liveStatus === "closed" && (
+              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gray-500/10 border border-gray-600/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-500 inline-block"></span>
+                <span className="text-xs font-mono text-gray-500">MARKET CLOSED</span>
+              </span>
+            )}
+            <span className="text-sm font-mono font-bold text-gray-300">{formatDateTime(now)}</span>
+          </div>
           {lastUpdated && (
             <span className="text-xs font-mono text-gray-600">
               Last updated: <span className="text-gray-500">{lastUpdated}</span>
@@ -582,6 +625,83 @@ export default function HomeClient({ data }: { data: Stock[] }) {
 
               </div>
 
+              {/* ── MOBILE CARD VIEW (< md) ───────────────────────────── */}
+              <div className="md:hidden divide-y divide-[#1e2a38]">
+                {stocks.map((row, i) => (
+                  <div key={i} className="px-4 py-3 hover:bg-[#0d1520] transition-colors">
+                    {/* Row 1: Stock name + price + buttons */}
+                    <div className="flex items-center justify-between mb-2">
+                      <a
+                        href={`https://www.screener.in/company/${row.ticker}/consolidated/`}
+                        target="_blank"
+                        className={`font-bold text-sm transition-colors hover:opacity-80 ${stockNameColor(row.stockPE, row.industryPE)}`}
+                      >
+                        {row.stock}
+                      </a>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-bold text-gray-200">
+                          {(() => {
+                            const live = livePrices[row.ticker];
+                            const price = live ?? row.currentPrice;
+                            return price != null ? `₹${price.toLocaleString("en-IN")}` : "—";
+                          })()}
+                        </span>
+                        <div className="flex gap-1">
+                          {(row.stock6M != null || row.nifty50_6M != null) && (
+                            <button onClick={() => setSelectedReturns(row)}
+                              className="px-2 py-1 rounded text-xs font-mono bg-[#1e2a38] text-gray-400 border border-[#2e3f54] transition-all">
+                              📊
+                            </button>
+                          )}
+                          <button onClick={() => setSelectedStock(row)}
+                            className="px-2 py-1 rounded text-xs font-mono bg-[#1e2a38] text-gray-400 border border-[#2e3f54] transition-all">
+                            {row.aiSummary ? "🤖" : "📋"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Row 2: 52W range + % from high + PE */}
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
+                      {row.high52W != null && (
+                        <span className="text-xs font-mono text-gray-600">
+                          52W: <span className="text-emerald-400">{row.high52W.toLocaleString("en-IN")}</span>
+                          <span className="text-gray-600"> / </span>
+                          <span className="text-red-400">{row.low52W?.toLocaleString("en-IN") ?? "—"}</span>
+                        </span>
+                      )}
+                      {row.pctFrom52WHigh != null && (
+                        <span className={`text-xs font-mono font-bold ${row.pctFrom52WHigh <= -20 ? "text-emerald-400" : row.pctFrom52WHigh <= -10 ? "text-amber-400" : "text-red-400"}`}>
+                          {row.pctFrom52WHigh.toFixed(1)}% from high
+                        </span>
+                      )}
+                      {row.stockPE != null && (
+                        <span className="text-xs font-mono text-gray-300 font-bold">PE {row.stockPE.toFixed(1)}x</span>
+                      )}
+                    </div>
+                    {/* Row 3: DMA values + RSI */}
+                    <div className="flex items-center gap-4 flex-wrap">
+                      {row.dma50Value != null && (
+                        <span className={`text-xs font-mono font-bold ${row.above50DMA && row.above200DMA ? "text-green-500" : row.above50DMA ? "text-green-300" : "text-red-300"}`}>
+                          50D {row.dma50Value.toLocaleString("en-IN")}
+                        </span>
+                      )}
+                      {row.dma200Value != null && (
+                        <span className={`text-xs font-mono font-bold ${row.above50DMA && row.above200DMA ? "text-green-500" : row.above200DMA ? "text-green-300" : "text-red-300"}`}>
+                          200D {row.dma200Value.toLocaleString("en-IN")}
+                        </span>
+                      )}
+                      {row.rsi !== null && (
+                        <span className={`text-xs font-mono font-bold ${rsiColor(row.rsi)}`}>
+                          RSI {row.rsi}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── DESKTOP TABLE VIEW (>= md) ───────────────────────── */}
+              <div className="hidden md:block">
               <table className="w-full text-sm table-fixed">
                 <colgroup>
                   <col style={{ width: "20%" }} />
@@ -625,9 +745,21 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                           {row.stock}
                         </a>
                       </td>
-                      {/* Current Price */}
-                      <td className="px-4 py-3 text-right font-mono text-sm text-gray-200">
-                        {row.currentPrice != null ? `₹${row.currentPrice.toLocaleString("en-IN")}` : <span className="text-gray-600">—</span>}
+                      {/* Current Price — live if available */}
+                      <td className="px-4 py-3 text-right font-mono text-sm">
+                        {(() => {
+                          const live = livePrices[row.ticker];
+                          const prev = prevPrices[row.ticker];
+                          const price = live ?? row.currentPrice;
+                          const isLive = !!live;
+                          const up   = isLive && prev != null && live > prev;
+                          const down = isLive && prev != null && live < prev;
+                          return price != null ? (
+                            <span className={`font-bold transition-colors duration-500 ${up ? "text-emerald-400" : down ? "text-red-400" : isLive ? "text-white" : "text-gray-200"}`}>
+                              ₹{price.toLocaleString("en-IN")}
+                            </span>
+                          ) : <span className="text-gray-600">—</span>;
+                        })()}
                       </td>
                       {/* 52W High / Low */}
                       <td className="px-4 py-3 text-right font-mono text-xs">
@@ -712,6 +844,7 @@ export default function HomeClient({ data }: { data: Stock[] }) {
                   ))}
                 </tbody>
               </table>
+              </div>{/* end desktop table */}
             </div>
           );
         })}
